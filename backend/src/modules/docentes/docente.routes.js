@@ -8,6 +8,7 @@ router.use(authenticateJWT);
 router.get('/', docenteController.getAll);
 router.post('/', docenteController.create);
 router.put('/:id', docenteController.update);
+router.delete('/bulk/clear', docenteController.removeAll);
 router.delete('/:id', docenteController.remove);
 
 module.exports = router;

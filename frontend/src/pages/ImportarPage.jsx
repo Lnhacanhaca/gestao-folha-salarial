@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Papa from 'papaparse';
-import { Upload, Plus, Trash2, Save, FileSpreadsheet, Loader2, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Save, Loader2, UserPlus } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -73,53 +72,7 @@ const ImportarPage = () => {
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: (results) => {
-          if (results.data.length === 0) {
-            alert('O ficheiro CSV está vazio ou inválido.');
-            return;
-          }
 
-          const mapped = results.data.map((row, index) => {
-            const keys = Object.keys(row);
-            let nameKey = keys.find(k => k.toLowerCase().includes('nome') || k.toLowerCase().includes('docente') || k.toLowerCase() === 'docentes');
-            if (!nameKey) {
-              nameKey = keys[1] && row[keys[1]] && isNaN(row[keys[1]]) ? keys[1] : keys[0];
-            }
-
-            const getVal = (week, type) => {
-              let k = keys.find(key => key.toUpperCase() === `W${week}_${type}` || key.toUpperCase() === `S${week}_${type}`);
-              if (k) return parseFloat(row[k]) || 0;
-              return 0;
-            };
-
-            return {
-              docente_nome: row[nameKey] || `Docente ${index + 1} (Nome não encontrado)`,
-              semanas: [
-                { semana: 1, ap: getVal(1, 'AP'), ad: getVal(1, 'AD') },
-                { semana: 2, ap: getVal(2, 'AP'), ad: getVal(2, 'AD') },
-                { semana: 3, ap: getVal(3, 'AP'), ad: getVal(3, 'AD') },
-                { semana: 4, ap: getVal(4, 'AP'), ad: getVal(4, 'AD') },
-                { semana: 5, ap: getVal(5, 'AP'), ad: getVal(5, 'AD') },
-              ]
-            };
-          });
-          
-          setDados(mapped);
-          console.log("Colunas detectadas no CSV:", Object.keys(results.data[0]));
-          console.log("Primeira linha processada:", mapped[0]);
-        },
-        error: (err) => {
-          alert('Erro ao ler ficheiro CSV: ' + err.message);
-        }
-      });
-    }
-  };
 
   const addDocente = () => {
     setDados([...dados, {
@@ -273,7 +226,7 @@ const ImportarPage = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Lançamento de Horas</h1>
-          <p className="text-muted-foreground">Introduza manualmente ou importe um ficheiro CSV</p>
+          <p className="text-muted-foreground">Introduza manualmente as horas e aulas dadas dos docentes</p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -307,11 +260,6 @@ const ImportarPage = () => {
             <UserPlus size={18} />
             Puxar Docentes
           </button>
-          <label className={`bg-secondary hover:bg-secondary/80 text-foreground px-4 py-2 rounded-lg cursor-pointer transition-colors flex items-center gap-2 font-medium ${isReadOnly ? 'opacity-50 pointer-events-none' : ''}`}>
-            <Upload size={18} />
-            Importar CSV
-            <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" disabled={isReadOnly} />
-          </label>
           <button 
             onClick={handleSave}
             disabled={loading || dados.length === 0 || isReadOnly}

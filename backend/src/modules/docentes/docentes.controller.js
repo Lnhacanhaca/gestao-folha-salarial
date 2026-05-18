@@ -45,4 +45,13 @@ const remove = async (req, res, next) => {
   }
 };
 
-module.exports = { getAll, create, update, remove };
+const removeAll = async (req, res, next) => {
+  try {
+    await db('docentes').del();
+    res.json({ message: 'Todos os docentes foram removidos com sucesso' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getAll, create, update, remove, removeAll };

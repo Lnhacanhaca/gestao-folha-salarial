@@ -111,6 +111,19 @@ const DocentesPage = () => {
     }
   });
 
+  const clearMutation = useMutation({
+    mutationFn: () => api.delete('/docentes/bulk/clear'),
+    onSuccess: () => {
+      queryClient.invalidateQueries(['docentes']);
+    }
+  });
+
+  const handleClearAll = () => {
+    if (window.confirm('ATENÇÃO: Tem certeza que deseja eliminar TODOS os docentes cadastrados? Esta ação não pode ser desfeita.')) {
+      clearMutation.mutate();
+    }
+  };
+
   const filteredDocentes = docentes?.filter(d => 
     d.nome?.toLowerCase().includes(search.toLowerCase())
   );
@@ -219,6 +232,16 @@ const DocentesPage = () => {
             <UserPlus size={20} />
             Novo Docente
           </button>
+
+          {docentes && docentes.length > 0 && (
+            <button 
+              onClick={handleClearAll}
+              className="bg-destructive hover:bg-destructive/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-destructive/20"
+            >
+              <Trash2 size={20} />
+              Eliminar Tudo
+            </button>
+          )}
         </div>
       </div>
 
