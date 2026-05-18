@@ -110,54 +110,85 @@ const getGeral = async (req, res, next) => {
   try {
     const { mes, ano } = req.query;
 
-    const folhas = await db('folhas as f')
-      .join('docentes as d', 'f.docente_id', 'd.id')
-      .select('f.id as folha_id', 'd.id as docente_id', 'd.nome as docente_nome', 'f.total_ap', 'f.total_ad', 'f.valor_receber', 'f.retificada', 'f.observacoes')
+    // 1. Fetch all docentes from the database
+    const docentes = await db('docentes').select('*').orderBy('nome', 'asc');
+
+    // 2. Fetch all saved sheets for this month/year
+    const savedFolhas = await db('folhas as f')
+      .select('f.*')
       .where({ 'f.mes': mes, 'f.ano': ano });
 
-    const folha_ids = folhas.map(f => f.folha_id);
+    const folha_ids = savedFolhas.map(f => f.id);
     const detalhes = folha_ids.length > 0 ? await db('folha_detalhes').whereIn('folha_id', folha_ids) : [];
 
-    const grouped = {};
-    for (const f of folhas) {
-      if (!grouped[f.docente_id]) {
-        grouped[f.docente_id] = {
-          docente_nome: f.docente_nome,
-          total_ap: 0,
-          total_ad: 0,
-          valor_receber: 0,
-          retificada: f.retificada || 0,
-          observacoes: f.observacoes || null,
-          semanas: [
-            { semana: 1, ap: 0, ad: 0 },
-            { semana: 2, ap: 0, ad: 0 },
-            { semana: 3, ap: 0, ad: 0 },
-            { semana: 4, ap: 0, ad: 0 },
-            { semana: 5, ap: 0, ad: 0 }
-          ]
-        };
-      }
-      
-      const g = grouped[f.docente_id];
-      g.total_ap += Number(f.total_ap) || 0;
-      g.total_ad += Number(f.total_ad) || 0;
-      g.valor_receber += Number(f.valor_receber) || 0;
-      g.retificada = g.retificada || f.retificada || 0;
-      if (f.observacoes) {
-        g.observacoes = g.observacoes ? `${g.observacoes}; ${f.observacoes}` : f.observacoes;
-      }
-
-      const f_detalhes = detalhes.filter(d => d.folha_id === f.folha_id);
-      f_detalhes.forEach(d => {
-        const idx = d.semana - 1;
-        if (idx >= 0 && idx < 5) {
-          g.semanas[idx].ap += Number(d.ap) || 0;
-          g.semanas[idx].ad += Number(d.ad) || 0;
+    const data = docentes.map(doc => {
+      // Parse doc.cursos to find all courses and sum their AP
+      let total_weekly_ap = 0;
+      try {
+        let cursosArray = [];
+        if (typeof doc.cursos === 'string') {
+          const parsed = JSON.parse(doc.cursos);
+          cursosArray = Array.isArray(parsed) ? parsed : [parsed];
+        } else if (Array.isArray(doc.cursos)) {
+          cursosArray = doc.cursos;
+        } else if (typeof doc.cursos === 'number') {
+          cursosArray = [{ id: doc.cursos, ap: 0 }];
         }
-      });
-    }
+        cursosArray.forEach(c => {
+          if (c && c.ap !== undefined) {
+            total_weekly_ap += parseFloat(c.ap) || 0;
+          } else if (typeof c === 'object' && c.ap) {
+            total_weekly_ap += parseFloat(c.ap) || 0;
+          }
+        });
+      } catch (e) {}
 
-    const data = Object.values(grouped).sort((a, b) => a.docente_nome.localeCompare(b.docente_nome));
+      // Find all saved sheets for this teacher in this month/year
+      const teacherFolhas = savedFolhas.filter(f => f.docente_id === doc.id);
+      
+      let total_ad = 0;
+      let retificada = 0;
+      let observacoes = [];
+
+      // Weeks initialization
+      const semanas = [
+        { semana: 1, ap: total_weekly_ap, ad: 0 },
+        { semana: 2, ap: total_weekly_ap, ad: 0 },
+        { semana: 3, ap: total_weekly_ap, ad: 0 },
+        { semana: 4, ap: total_weekly_ap, ad: 0 },
+        { semana: 5, ap: total_weekly_ap, ad: 0 }
+      ];
+
+      // Sum saved AD weekly values from database details
+      teacherFolhas.forEach(f => {
+        retificada = retificada || f.retificada || 0;
+        if (f.observacoes) observacoes.push(f.observacoes);
+
+        const f_detalhes = detalhes.filter(d => d.folha_id === f.id);
+        f_detalhes.forEach(d => {
+          const idx = d.semana - 1;
+          if (idx >= 0 && idx < 5) {
+            semanas[idx].ad += Number(d.ad) || 0;
+          }
+        });
+      });
+
+      // Recalculate totals
+      const total_ap = semanas.reduce((acc, s) => acc + s.ap, 0);
+      const computed_total_ad = semanas.reduce((acc, s) => acc + s.ad, 0);
+      const valor_receber = computed_total_ad * 500;
+
+      return {
+        docente_nome: doc.nome,
+        total_ap,
+        total_ad: computed_total_ad,
+        valor_receber,
+        retificada,
+        observacoes: observacoes.length > 0 ? observacoes.join('; ') : null,
+        semanas
+      };
+    });
+
     res.json(data);
   } catch (error) {
     next(error);
