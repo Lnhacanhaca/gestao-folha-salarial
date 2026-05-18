@@ -173,8 +173,8 @@ const ImportarPage = () => {
               cursosArray = doc.cursos;
             }
             const cursoObj = cursosArray.find(c => (c.id || c) === fCursoId);
-            if (cursoObj && cursoObj.ap) {
-              apValue = parseFloat(cursoObj.ap);
+            if (cursoObj && cursoObj.ap !== undefined) {
+              apValue = parseFloat(cursoObj.ap) || 0;
             }
           } catch(e) {}
 
@@ -190,15 +190,25 @@ const ImportarPage = () => {
         const mergedDados = defaultMapped.map(def => {
           const saved = savedFolha.find(s => s.docente_nome.trim().toLowerCase() === def.docente_nome.trim().toLowerCase());
           if (saved) {
+            const mergedSemanas = def.semanas.map((defSemana, sIdx) => {
+              const savedSemana = saved.semanas?.[sIdx];
+              return {
+                semana: sIdx + 1,
+                // Fallback to teacher profile's programmed AP if saved AP is 0/empty and profile has a value
+                ap: (savedSemana && parseFloat(savedSemana.ap) !== 0) ? parseFloat(savedSemana.ap) : defSemana.ap,
+                ad: savedSemana ? (parseFloat(savedSemana.ad) || 0) : 0
+              };
+            });
+
             return {
               ...def,
               docente_nome: saved.docente_nome,
-              total_ap: saved.total_ap,
-              total_ad: saved.total_ad,
-              valor_receber: saved.valor_receber,
+              total_ap: mergedSemanas.reduce((acc, s) => acc + s.ap, 0),
+              total_ad: mergedSemanas.reduce((acc, s) => acc + s.ad, 0),
+              valor_receber: mergedSemanas.reduce((acc, s) => acc + s.ad, 0) * 500,
               retificada: saved.retificada,
               observacoes: saved.observacoes,
-              semanas: saved.semanas && saved.semanas.length > 0 ? saved.semanas : def.semanas
+              semanas: mergedSemanas
             };
           }
           return def;
