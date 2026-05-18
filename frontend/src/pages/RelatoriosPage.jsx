@@ -202,7 +202,10 @@ const RelatoriosPage = () => {
             <img src="/logo.png" alt="Instituto Superior Politécnico de Tete" className="h-24 object-contain" />
           </div>
           <h3 className="text-lg font-bold uppercase mt-2">
-            {cursoId === 1 ? 'Direcção do Curso Nocturno' : `Direcção do ${cursos[cursoId]}`}
+            {cursoId === 1 ? 'Direcção do Curso Nocturno' : 
+             cursoId === 2 ? 'Direcção do Curso Contabilidade e Auditoria e Contabilidade e Administração Pública Pos-laboral' :
+             cursoId === 3 ? 'Direcção do Curso Engenharia de Minas e Engenharia de Processamento Mineral Pos-laboral' :
+             cursoId === 4 ? 'Direcção do Curso Engenharia Informática Pos-laboral' : ''}
           </h3>
           <p className="mt-4 font-bold text-sm">
             Relação das Aulas Dadas por Docentes no Curso Nocturno - Mês de {meses[mes-1]} / {ano}
@@ -347,7 +350,11 @@ const RelatoriosPage = () => {
             <>
               <div></div>
               <div className="text-center space-y-8">
-                <p className="text-sm font-bold">O Director do {cursos[cursoId]}</p>
+                <p className="text-sm font-bold">
+                  {cursoId === 2 ? 'O Director do Curso Contabilidade e Auditoria e Contabilidade e Administração Pública Pos-laboral' :
+                   cursoId === 3 ? 'O Director do Curso Engenharia de Minas e Engenharia de Processamento Mineral Pos-laboral' :
+                   cursoId === 4 ? 'O Director do Curso Engenharia Informática Pos-laboral' : ''}
+                </p>
                 <div className="border-b border-black w-64 mx-auto"></div>
                 <p className="text-xs">
                   {cursoId === 2 ? '/MSc. Almeida Ismael de Albuquerque/' : 
