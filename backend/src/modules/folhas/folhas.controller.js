@@ -143,7 +143,8 @@ const getByCurso = async (req, res, next) => {
         f_detalhes.forEach(d => {
           const idx = d.semana - 1;
           if (idx >= 0 && idx < 5) {
-            semanas[idx].ap = (d.ap && parseFloat(d.ap) !== 0) ? parseFloat(d.ap) : apValue;
+            // ALWAYS override with the teacher profile's current AP!
+            semanas[idx].ap = apValue;
             semanas[idx].ad = parseFloat(d.ad) || 0;
           }
         });

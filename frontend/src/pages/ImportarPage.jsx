@@ -194,8 +194,8 @@ const ImportarPage = () => {
               const savedSemana = saved.semanas?.[sIdx];
               return {
                 semana: sIdx + 1,
-                // Fallback to teacher profile's programmed AP if saved AP is 0/empty and profile has a value
-                ap: (savedSemana && parseFloat(savedSemana.ap) !== 0) ? parseFloat(savedSemana.ap) : defSemana.ap,
+                // ALWAYS override with the teacher profile's current AP!
+                ap: defSemana.ap,
                 ad: savedSemana ? (parseFloat(savedSemana.ad) || 0) : 0
               };
             });
