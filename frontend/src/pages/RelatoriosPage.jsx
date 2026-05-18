@@ -24,9 +24,9 @@ const RelatoriosPage = () => {
 
   const cursos = {
     1: "Geral (Consolidado)",
-    2: "CA / CAP - Contabilidade e Auditoria e Contabilidade e Administração Pública",
-    3: "EM / EPM - Engenharia de Minas e Engenharia de Processamento Mineral",
-    4: "EI - Engenharia informatica"
+    2: "Contabilidade e Auditoria e Contabilidade e Administração Pública",
+    3: "Engenharia de Minas e Engenharia de Processamento Mineral",
+    4: "Engenharia Informática"
   };
 
   const fetchData = async () => {
@@ -131,9 +131,9 @@ const RelatoriosPage = () => {
             className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20"
           >
             <option value={1}>Geral (Todos os Cursos)</option>
-            <option value={2}>CA / CAP - Contabilidade e Auditoria e Contabilidade e Administração Pública</option>
-            <option value={3}>EM / EPM - Engenharia de Minas e Engenharia de Processamento Mineral</option>
-            <option value={4}>EI - Engenharia informatica</option>
+            <option value={2}>Contabilidade e Auditoria e Contabilidade e Administração Pública</option>
+            <option value={3}>Engenharia de Minas e Engenharia de Processamento Mineral</option>
+            <option value={4}>Engenharia Informática</option>
           </select>
         </div>
       </div>
