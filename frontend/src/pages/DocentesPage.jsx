@@ -1,15 +1,77 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, UserPlus, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, UserPlus, Loader2, Upload } from 'lucide-react';
 import api from '../services/api';
+import Papa from 'papaparse';
 
 const DocentesPage = () => {
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDocente, setEditingDocente] = useState(null);
   const [formData, setFormData] = useState({ nome: '', categoria: '', cursos: [1] });
+  const [importing, setImporting] = useState(false);
 
   const queryClient = useQueryClient();
+
+  const handleCSVImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setImporting(true);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        if (results.data.length === 0) {
+          alert('O ficheiro CSV está vazio ou inválido.');
+          setImporting(false);
+          return;
+        }
+
+        try {
+          const promises = results.data.map(async (row) => {
+            const keys = Object.keys(row);
+            const nameKey = keys.find(k => k.toLowerCase().includes('nome') || k.toLowerCase().includes('docente') || k.toLowerCase() === 'docentes');
+            if (!nameKey || !row[nameKey]) return null;
+
+            const catKey = keys.find(k => k.toLowerCase().includes('categ') || k.toLowerCase().includes('grau'));
+            const categoria = catKey ? row[catKey] : '';
+
+            const cursosKey = keys.find(k => k.toLowerCase().includes('curso') || k.toLowerCase().includes('leciona'));
+            let cursosArray = [{ id: 2, ap: 0 }, { id: 3, ap: 0 }, { id: 4, ap: 0 }];
+            
+            if (cursosKey && row[cursosKey]) {
+              const val = row[cursosKey].toLowerCase();
+              const parsed = [];
+              if (val.includes('cont') || val.includes('ca') || val.includes('cap')) parsed.push({ id: 2, ap: 0 });
+              if (val.includes('min') || val.includes('em') || val.includes('epm')) parsed.push({ id: 3, ap: 0 });
+              if (val.includes('inf') || val.includes('ei')) parsed.push({ id: 4, ap: 0 });
+              if (parsed.length > 0) cursosArray = parsed;
+            }
+
+            return api.post('/docentes', {
+              nome: row[nameKey].trim(),
+              categoria: (categoria || '').trim(),
+              cursos: cursosArray
+            });
+          });
+
+          await Promise.all(promises.filter(Boolean));
+          alert('Docentes importados com sucesso!');
+          queryClient.invalidateQueries(['docentes']);
+        } catch (err) {
+          alert('Erro ao importar docentes: ' + err.message);
+        } finally {
+          setImporting(false);
+          e.target.value = null;
+        }
+      },
+      error: (err) => {
+        alert('Erro ao ler ficheiro CSV: ' + err.message);
+        setImporting(false);
+      }
+    });
+  };
 
   const CURSOS_OPCOES = [
     { id: 1, nome: "Geral" },
@@ -143,13 +205,21 @@ const DocentesPage = () => {
           <p className="text-muted-foreground">Gestão unificada de professores do Curso Nocturno</p>
         </div>
 
-        <button 
-          onClick={() => openModal()}
-          className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20"
-        >
-          <UserPlus size={20} />
-          Novo Docente
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <label className={`bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg cursor-pointer transition-all flex items-center gap-2 font-bold shadow-sm ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+            {importing ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
+            Importar CSV
+            <input type="file" accept=".csv" onChange={handleCSVImport} className="hidden" disabled={importing} />
+          </label>
+
+          <button 
+            onClick={() => openModal()}
+            className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20"
+          >
+            <UserPlus size={20} />
+            Novo Docente
+          </button>
+        </div>
       </div>
 
       <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
