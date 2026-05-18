@@ -73,10 +73,33 @@ const getByCurso = async (req, res, next) => {
     const { id: curso_id } = req.params;
     const { mes, ano } = req.query;
 
+    // 1. Fetch all docentes who are registered for this course in their profile
+    const docentes = await db('docentes').select('*').orderBy('nome', 'asc');
+    const courseDocentes = docentes.filter(doc => {
+      try {
+        let cursosArray = [];
+        if (typeof doc.cursos === 'string') {
+          const parsed = JSON.parse(doc.cursos);
+          cursosArray = Array.isArray(parsed) ? parsed : [parsed];
+        } else if (Array.isArray(doc.cursos)) {
+          cursosArray = doc.cursos;
+        } else if (typeof doc.cursos === 'number') {
+          cursosArray = [{ id: doc.cursos, ap: 0 }];
+        }
+        return cursosArray.some(c => (c.id || c) === Number(curso_id));
+      } catch {
+        return false;
+      }
+    });
+
+    const courseDocenteIds = courseDocentes.map(d => d.id);
+
+    // 2. Fetch only sheets that belong to both this course and these valid teachers
     const data = await db('folhas as f')
       .join('docentes as d', 'f.docente_id', 'd.id')
       .select('f.*', 'd.nome as docente_nome')
-      .where({ 'f.curso_id': curso_id, 'f.mes': mes, 'f.ano': ano });
+      .where({ 'f.curso_id': curso_id, 'f.mes': mes, 'f.ano': ano })
+      .whereIn('f.docente_id', courseDocenteIds);
 
     for (let row of data) {
       const dbSemanas = await db('folha_detalhes')
