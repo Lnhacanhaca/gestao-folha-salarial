@@ -1,16 +1,53 @@
 import React, { useState, useEffect } from 'react';
 import Papa from 'papaparse';
-import { Upload, Plus, Trash2, Save, FileSpreadsheet, Loader2 } from 'lucide-react';
+import { Upload, Plus, Trash2, Save, FileSpreadsheet, Loader2, UserPlus } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const ImportarPage = () => {
   const { user } = useAuth();
-  const [mes, setMes] = useState(new Date().getMonth() + 1);
-  const [ano, setAno] = useState(new Date().getFullYear());
-  const [cursoId, setCursoId] = useState(user?.curso_id || 2);
-  const [dados, setDados] = useState([]);
+  const [mes, setMes] = useState(() => parseInt(localStorage.getItem('sgfs_mes')) || new Date().getMonth() + 1);
+  const [ano, setAno] = useState(() => parseInt(localStorage.getItem('sgfs_ano')) || new Date().getFullYear());
+  const [cursoId, setCursoId] = useState(() => parseInt(localStorage.getItem('sgfs_cursoId')) || user?.curso_id || 2);
+  const [dados, setDados] = useState(() => {
+    try {
+      const saved = localStorage.getItem('sgfs_dados_folha');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [loading, setLoading] = useState(false);
+  const [lastSaved, setLastSaved] = useState(null);
+  
+  // Use a ref to access latest state inside the interval without restarting it
+  const stateRef = React.useRef({ mes, ano, cursoId, dados });
+  useEffect(() => {
+    stateRef.current = { mes, ano, cursoId, dados };
+  }, [mes, ano, cursoId, dados]);
+
+  useEffect(() => {
+    localStorage.setItem('sgfs_mes', mes);
+    localStorage.setItem('sgfs_ano', ano);
+    localStorage.setItem('sgfs_cursoId', cursoId);
+    localStorage.setItem('sgfs_dados_folha', JSON.stringify(dados));
+  }, [mes, ano, cursoId, dados]);
+
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    const timer = setInterval(async () => {
+      const { mes, ano, cursoId, dados } = stateRef.current;
+      if (dados.length > 0) {
+        try {
+          await api.post('/folhas/importar', { mes, ano, curso_id: cursoId, dados });
+          setLastSaved(new Date());
+        } catch (err) {
+          console.error("Autosave failed", err);
+        }
+      }
+    }, 30000);
+    return () => clearInterval(timer);
+  }, []);
 
   const meses = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -24,20 +61,42 @@ const ImportarPage = () => {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          // Logic to map CSV columns to our JSON structure
-          // This depends on the legacy CSV format. 
-          // For now, let's assume a standard format or provide a mock mapper.
-          const mapped = results.data.map(row => ({
-            docente_nome: row.Docente || row.Nome || row['Nome do Docente'],
-            semanas: [
-              { semana: 1, ap: parseFloat(row.W1_AP) || 0, ad: parseFloat(row.W1_AD) || 0 },
-              { semana: 2, ap: parseFloat(row.W2_AP) || 0, ad: parseFloat(row.W2_AD) || 0 },
-              { semana: 3, ap: parseFloat(row.W3_AP) || 0, ad: parseFloat(row.W3_AD) || 0 },
-              { semana: 4, ap: parseFloat(row.W4_AP) || 0, ad: parseFloat(row.W4_AD) || 0 },
-              { semana: 5, ap: parseFloat(row.W5_AP) || 0, ad: parseFloat(row.W5_AD) || 0 },
-            ]
-          }));
+          if (results.data.length === 0) {
+            alert('O ficheiro CSV está vazio ou inválido.');
+            return;
+          }
+
+          const mapped = results.data.map((row, index) => {
+            const keys = Object.keys(row);
+            let nameKey = keys.find(k => k.toLowerCase().includes('nome') || k.toLowerCase().includes('docente') || k.toLowerCase() === 'docentes');
+            if (!nameKey) {
+              nameKey = keys[1] && row[keys[1]] && isNaN(row[keys[1]]) ? keys[1] : keys[0];
+            }
+
+            const getVal = (week, type) => {
+              let k = keys.find(key => key.toUpperCase() === `W${week}_${type}` || key.toUpperCase() === `S${week}_${type}`);
+              if (k) return parseFloat(row[k]) || 0;
+              return 0;
+            };
+
+            return {
+              docente_nome: row[nameKey] || `Docente ${index + 1} (Nome não encontrado)`,
+              semanas: [
+                { semana: 1, ap: getVal(1, 'AP'), ad: getVal(1, 'AD') },
+                { semana: 2, ap: getVal(2, 'AP'), ad: getVal(2, 'AD') },
+                { semana: 3, ap: getVal(3, 'AP'), ad: getVal(3, 'AD') },
+                { semana: 4, ap: getVal(4, 'AP'), ad: getVal(4, 'AD') },
+                { semana: 5, ap: getVal(5, 'AP'), ad: getVal(5, 'AD') },
+              ]
+            };
+          });
+          
           setDados(mapped);
+          console.log("Colunas detectadas no CSV:", Object.keys(results.data[0]));
+          console.log("Primeira linha processada:", mapped[0]);
+        },
+        error: (err) => {
+          alert('Erro ao ler ficheiro CSV: ' + err.message);
         }
       });
     }
@@ -58,7 +117,6 @@ const ImportarPage = () => {
     const val = parseFloat(value) || 0;
     const newDados = [...dados];
     
-    // Validation: AD cannot be greater than AP
     if (field === 'ad' && val > newDados[docIndex].semanas[weekIndex].ap) {
       alert('Erro: Aulas Dadas (AD) não podem ser maiores que Programadas (AP)');
       return;
@@ -77,10 +135,69 @@ const ImportarPage = () => {
         curso_id: cursoId,
         dados
       });
+      setLastSaved(new Date());
       alert('Dados salvos com sucesso!');
-      setDados([]);
+      // Removido o setDados([]) para que os dados continuem na tela
     } catch (err) {
       alert('Erro ao salvar dados: ' + (err.response?.data?.error?.message || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const carregarDocentes = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/docentes');
+      
+      const filtered = data.filter(doc => {
+        if (cursoId === 1) return true; // Geral pulls all
+        try {
+          let cursosArray = [{ id: 1, ap: 0 }];
+          if (typeof doc.cursos === 'string') {
+            const parsed = JSON.parse(doc.cursos);
+            cursosArray = Array.isArray(parsed) ? parsed : [parsed];
+          } else if (Array.isArray(doc.cursos)) {
+            cursosArray = doc.cursos;
+          } else if (typeof doc.cursos === 'number') {
+            cursosArray = [{ id: doc.cursos, ap: 0 }];
+          }
+          // Check if any course matches the ID
+          return cursosArray.some(c => (c.id || c) === cursoId);
+        } catch {
+          return true;
+        }
+      });
+
+      if (filtered.length === 0) {
+        alert("Nenhum docente associado a este curso foi encontrado.");
+      }
+
+      const mapped = filtered.map(doc => {
+        let apValue = 0;
+        try {
+          let cursosArray = [];
+          if (typeof doc.cursos === 'string') {
+            const parsed = JSON.parse(doc.cursos);
+            cursosArray = Array.isArray(parsed) ? parsed : [parsed];
+          } else if (Array.isArray(doc.cursos)) {
+            cursosArray = doc.cursos;
+          }
+          const cursoObj = cursosArray.find(c => (c.id || c) === cursoId);
+          if (cursoObj && cursoObj.ap) {
+            apValue = parseFloat(cursoObj.ap);
+          }
+        } catch(e) {}
+
+        return {
+          docente_nome: doc.nome,
+          semanas: Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: apValue, ad: 0 }))
+        };
+      });
+      
+      setDados(mapped);
+    } catch (err) {
+      alert("Erro ao carregar docentes da base de dados.");
     } finally {
       setLoading(false);
     }
@@ -98,7 +215,31 @@ const ImportarPage = () => {
           <p className="text-muted-foreground">Introduza manualmente ou importe um ficheiro CSV</p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {lastSaved && (
+            <span className="text-xs text-muted-foreground animate-in fade-in mr-2">
+              Guardado às {lastSaved.toLocaleTimeString()}
+            </span>
+          )}
+          <button 
+            onClick={() => {
+              if(window.confirm('Tem certeza que deseja limpar todos os dados actuais?')) {
+                setDados([]);
+              }
+            }}
+            disabled={dados.length === 0}
+            className="bg-destructive/10 hover:bg-destructive/20 text-destructive px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
+          >
+            <Trash2 size={18} />
+            Limpar
+          </button>
+          <button 
+            onClick={carregarDocentes}
+            className="bg-secondary hover:bg-secondary/80 text-foreground px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium"
+          >
+            <UserPlus size={18} />
+            Puxar Docentes
+          </button>
           <label className="bg-secondary hover:bg-secondary/80 text-foreground px-4 py-2 rounded-lg cursor-pointer transition-colors flex items-center gap-2 font-medium">
             <Upload size={18} />
             Importar CSV

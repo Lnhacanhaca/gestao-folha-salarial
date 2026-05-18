@@ -11,8 +11,9 @@ const getAll = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   try {
-    const { nome, categoria } = req.body;
-    const [docente] = await db('docentes').insert({ nome, categoria }).returning('*');
+    const { nome, categoria, cursos } = req.body;
+    const cursosStr = Array.isArray(cursos) ? JSON.stringify(cursos) : JSON.stringify([1]);
+    const [docente] = await db('docentes').insert({ nome, categoria, cursos: cursosStr }).returning('*');
     res.status(201).json(docente);
   } catch (error) {
     next(error);
@@ -22,8 +23,12 @@ const create = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { nome, categoria } = req.body;
-    await db('docentes').where({ id }).update({ nome, categoria });
+    const { nome, categoria, cursos } = req.body;
+    const updateData = { nome, categoria };
+    if (cursos) {
+      updateData.cursos = Array.isArray(cursos) ? JSON.stringify(cursos) : cursos;
+    }
+    await db('docentes').where({ id }).update(updateData);
     res.json({ message: 'Docente atualizado com sucesso' });
   } catch (error) {
     next(error);
