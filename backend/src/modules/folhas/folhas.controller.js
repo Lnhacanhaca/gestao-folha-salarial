@@ -94,34 +94,76 @@ const getByCurso = async (req, res, next) => {
 
     const courseDocenteIds = courseDocentes.map(d => d.id);
 
-    // 2. Fetch only sheets that belong to both this course and these valid teachers
-    const data = await db('folhas as f')
-      .join('docentes as d', 'f.docente_id', 'd.id')
-      .select('f.*', 'd.nome as docente_nome')
+    // 2. Fetch only sheets that belong to both this course and these valid teachers for this month/year
+    const savedFolhas = await db('folhas as f')
+      .select('f.*')
       .where({ 'f.curso_id': curso_id, 'f.mes': mes, 'f.ano': ano })
       .whereIn('f.docente_id', courseDocenteIds);
 
-    for (let row of data) {
-      const dbSemanas = await db('folha_detalhes')
-        .where({ folha_id: row.id })
-        .orderBy('semana', 'asc');
-        
-      row.semanas = [
-        { semana: 1, ap: 0, ad: 0 },
-        { semana: 2, ap: 0, ad: 0 },
-        { semana: 3, ap: 0, ad: 0 },
-        { semana: 4, ap: 0, ad: 0 },
-        { semana: 5, ap: 0, ad: 0 }
+    const folha_ids = savedFolhas.map(f => f.id);
+    const detalhes = folha_ids.length > 0 ? await db('folha_detalhes').whereIn('folha_id', folha_ids) : [];
+
+    const data = courseDocentes.map(doc => {
+      // Parse doc.cursos to find the weekly AP for this specific course
+      let apValue = 0;
+      try {
+        let cursosArray = [];
+        if (typeof doc.cursos === 'string') {
+          const parsed = JSON.parse(doc.cursos);
+          cursosArray = Array.isArray(parsed) ? parsed : [parsed];
+        } else if (Array.isArray(doc.cursos)) {
+          cursosArray = doc.cursos;
+        }
+        const cursoObj = cursosArray.find(c => (c.id || c) === Number(curso_id));
+        if (cursoObj && cursoObj.ap !== undefined) {
+          apValue = parseFloat(cursoObj.ap) || 0;
+        }
+      } catch (e) {}
+
+      // Find saved sheet
+      const saved = savedFolhas.find(f => f.docente_id === doc.id);
+
+      // Weeks initialization
+      const semanas = [
+        { semana: 1, ap: apValue, ad: 0 },
+        { semana: 2, ap: apValue, ad: 0 },
+        { semana: 3, ap: apValue, ad: 0 },
+        { semana: 4, ap: apValue, ad: 0 },
+        { semana: 5, ap: apValue, ad: 0 }
       ];
-      
-      dbSemanas.forEach(s => {
-         const idx = s.semana - 1;
-         if (idx >= 0 && idx < 5) {
-           row.semanas[idx].ap = s.ap;
-           row.semanas[idx].ad = s.ad;
-         }
-      });
-    }
+
+      let retificada = 0;
+      let observacoes = null;
+
+      if (saved) {
+        retificada = saved.retificada || 0;
+        observacoes = saved.observacoes || null;
+
+        const f_detalhes = detalhes.filter(d => d.folha_id === saved.id);
+        f_detalhes.forEach(d => {
+          const idx = d.semana - 1;
+          if (idx >= 0 && idx < 5) {
+            semanas[idx].ap = (d.ap && parseFloat(d.ap) !== 0) ? parseFloat(d.ap) : apValue;
+            semanas[idx].ad = parseFloat(d.ad) || 0;
+          }
+        });
+      }
+
+      // Recalculate totals
+      const total_ap = semanas.reduce((acc, s) => acc + s.ap, 0);
+      const total_ad = semanas.reduce((acc, s) => acc + s.ad, 0);
+      const valor_receber = total_ad * 500;
+
+      return {
+        docente_nome: doc.nome,
+        total_ap,
+        total_ad,
+        valor_receber,
+        retificada,
+        observacoes,
+        semanas
+      };
+    });
 
     res.json(data);
   } catch (error) {
