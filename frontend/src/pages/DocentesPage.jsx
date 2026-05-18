@@ -75,9 +75,9 @@ const DocentesPage = () => {
 
   const CURSOS_OPCOES = [
     { id: 1, nome: "Geral" },
-    { id: 2, nome: "CA / CAP" },
-    { id: 3, nome: "EM / EPM" },
-    { id: 4, nome: "Informática (EI)" }
+    { id: 2, nome: "CA / CAP - Contabilidade e Auditoria e Contabilidade e Administração Pública" },
+    { id: 3, nome: "EM / EPM - Engenharia de Minas e Engenharia de Processamento Mineral" },
+    { id: 4, nome: "EI - Engenharia informatica" }
   ];
 
   const { data: docentes, isLoading } = useQuery({

@@ -303,9 +303,9 @@ const ImportarPage = () => {
             className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-muted"
           >
             <option value={1}>Geral (Consolidado)</option>
-            <option value={2}>Contabilidade e Auditoria e Contabilidade e Admin Pública</option>
-            <option value={3}>Engenharia de Minas e Processamento Mineral</option>
-            <option value={4}>Engenharia Informática</option>
+            <option value={2}>CA / CAP - Contabilidade e Auditoria e Contabilidade e Administração Pública</option>
+            <option value={3}>EM / EPM - Engenharia de Minas e Engenharia de Processamento Mineral</option>
+            <option value={4}>EI - Engenharia informatica</option>
           </select>
         </div>
       </div>
