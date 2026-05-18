@@ -49,6 +49,12 @@ const RelatoriosPage = () => {
     fetchData();
   }, [mes, ano, cursoId]);
 
+  useEffect(() => {
+    if (user && user.role !== 'ADMIN') {
+      setCursoId(user.curso_id || 2);
+    }
+  }, [user]);
+
   // Handle course change to reset view if needed
   useEffect(() => {
     if (cursoId !== 1) setViewMode('folha');
@@ -128,7 +134,8 @@ const RelatoriosPage = () => {
           <select 
             value={cursoId} 
             onChange={(e) => setCursoId(parseInt(e.target.value))}
-            className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20"
+            disabled={user?.role !== 'ADMIN'}
+            className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-muted"
           >
             <option value={1}>Geral (Todos os Cursos)</option>
             <option value={2}>Contabilidade e Auditoria e Contabilidade e Administração Pública</option>

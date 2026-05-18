@@ -7,17 +7,34 @@ const ImportarPage = () => {
   const { user } = useAuth();
   const [mes, setMes] = useState(() => parseInt(localStorage.getItem('sgfs_mes')) || new Date().getMonth() + 1);
   const [ano, setAno] = useState(() => parseInt(localStorage.getItem('sgfs_ano')) || new Date().getFullYear());
-  const [cursoId, setCursoId] = useState(() => parseInt(localStorage.getItem('sgfs_cursoId')) || user?.curso_id || 2);
-  const [dados, setDados] = useState(() => {
-    try {
-      const saved = localStorage.getItem('sgfs_dados_folha');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [cursoId, setCursoId] = useState(2);
+  const [dados, setDados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+
+  useEffect(() => {
+    if (user) {
+      const activeCursoId = user.role !== 'ADMIN' ? user.curso_id : (parseInt(localStorage.getItem('sgfs_cursoId')) || user.curso_id || 2);
+      setCursoId(activeCursoId);
+      
+      const savedCursoId = parseInt(localStorage.getItem('sgfs_cursoId'));
+      const savedMes = parseInt(localStorage.getItem('sgfs_mes'));
+      const savedAno = parseInt(localStorage.getItem('sgfs_ano'));
+      
+      if (savedCursoId === activeCursoId && savedMes === mes && savedAno === ano) {
+        try {
+          const saved = localStorage.getItem('sgfs_dados_folha');
+          if (saved) {
+            setDados(JSON.parse(saved));
+            setLastSaved(new Date());
+            return;
+          }
+        } catch (e) {}
+      }
+      
+      fetchFolha(mes, ano, activeCursoId);
+    }
+  }, [user]);
 
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
