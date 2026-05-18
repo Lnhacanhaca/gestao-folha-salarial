@@ -38,14 +38,16 @@ const DocentesPage = () => {
             const categoria = catKey ? row[catKey] : '';
 
             const cursosKey = keys.find(k => k.toLowerCase().includes('curso') || k.toLowerCase().includes('leciona'));
-            let cursosArray = [{ id: 2, ap: 0 }, { id: 3, ap: 0 }, { id: 4, ap: 0 }];
+            const apKey = keys.find(k => k.toLowerCase().includes('ap') || k.toLowerCase().includes('hora') || k.toLowerCase().includes('prog') || k.toLowerCase().includes('carga'));
+            const apVal = apKey ? parseFloat(row[apKey]) || 0 : 0;
+            let cursosArray = [{ id: 2, ap: apVal }, { id: 3, ap: apVal }, { id: 4, ap: apVal }];
             
             if (cursosKey && row[cursosKey]) {
               const val = row[cursosKey].toLowerCase();
               const parsed = [];
-              if (val.includes('cont') || val.includes('ca') || val.includes('cap')) parsed.push({ id: 2, ap: 0 });
-              if (val.includes('min') || val.includes('em') || val.includes('epm')) parsed.push({ id: 3, ap: 0 });
-              if (val.includes('inf') || val.includes('ei')) parsed.push({ id: 4, ap: 0 });
+              if (val.includes('cont') || val.includes('ca') || val.includes('cap')) parsed.push({ id: 2, ap: apVal });
+              if (val.includes('min') || val.includes('em') || val.includes('epm')) parsed.push({ id: 3, ap: apVal });
+              if (val.includes('inf') || val.includes('ei')) parsed.push({ id: 4, ap: apVal });
               if (parsed.length > 0) cursosArray = parsed;
             }
 
@@ -162,7 +164,7 @@ const DocentesPage = () => {
       });
     } else {
       setEditingDocente(null);
-      setFormData({ nome: '', categoria: '', cursos: [2, 3, 4] }); // default check all specific courses
+      setFormData({ nome: '', categoria: '', cursos: [{ id: 2, ap: 0 }, { id: 3, ap: 0 }, { id: 4, ap: 0 }] });
     }
     setIsModalOpen(true);
   };
