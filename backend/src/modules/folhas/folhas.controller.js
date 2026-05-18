@@ -27,6 +27,8 @@ const importar = async (req, res, next) => {
           total_ap,
           total_ad,
           valor_receber,
+          retificada: item.retificada ? 1 : 0,
+          observacoes: item.observacoes || null,
           updated_at: new Date()
         });
         // Clear details to re-insert
@@ -39,7 +41,9 @@ const importar = async (req, res, next) => {
           ano,
           total_ap,
           total_ad,
-          valor_receber
+          valor_receber,
+          retificada: item.retificada ? 1 : 0,
+          observacoes: item.observacoes || null
         }).returning('*');
       }
 
@@ -106,7 +110,7 @@ const getGeral = async (req, res, next) => {
 
     const folhas = await db('folhas as f')
       .join('docentes as d', 'f.docente_id', 'd.id')
-      .select('f.id as folha_id', 'd.id as docente_id', 'd.nome as docente_nome', 'f.total_ap', 'f.total_ad', 'f.valor_receber')
+      .select('f.id as folha_id', 'd.id as docente_id', 'd.nome as docente_nome', 'f.total_ap', 'f.total_ad', 'f.valor_receber', 'f.retificada', 'f.observacoes')
       .where({ 'f.mes': mes, 'f.ano': ano });
 
     const folha_ids = folhas.map(f => f.folha_id);
@@ -120,6 +124,8 @@ const getGeral = async (req, res, next) => {
           total_ap: 0,
           total_ad: 0,
           valor_receber: 0,
+          retificada: f.retificada || 0,
+          observacoes: f.observacoes || null,
           semanas: [
             { semana: 1, ap: 0, ad: 0 },
             { semana: 2, ap: 0, ad: 0 },
@@ -134,6 +140,10 @@ const getGeral = async (req, res, next) => {
       g.total_ap += f.total_ap || 0;
       g.total_ad += f.total_ad || 0;
       g.valor_receber += f.valor_receber || 0;
+      g.retificada = g.retificada || f.retificada || 0;
+      if (f.observacoes) {
+        g.observacoes = g.observacoes ? `${g.observacoes}; ${f.observacoes}` : f.observacoes;
+      }
 
       const f_detalhes = detalhes.filter(d => d.folha_id === f.folha_id);
       f_detalhes.forEach(d => {

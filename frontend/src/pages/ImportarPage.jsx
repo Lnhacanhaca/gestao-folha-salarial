@@ -19,6 +19,25 @@ const ImportarPage = () => {
   });
   const [loading, setLoading] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+
+  const currentMonth = new Date().getMonth() + 1;
+  const currentYear = new Date().getFullYear();
+  const currentDay = new Date().getDate();
+
+  let prevMonth = currentMonth - 1;
+  let prevYear = currentYear;
+  if (prevMonth === 0) {
+    prevMonth = 12;
+    prevYear = currentYear - 1;
+  }
+
+  const isPreviousMonth = ano === prevYear && mes === prevMonth;
+  const isRectificationPeriod = currentDay >= 5 && currentDay <= 20;
+  const canEditPreviousMonth = isPreviousMonth && isRectificationPeriod;
+
+  const isReadOnly = (ano < currentYear || (ano === currentYear && mes < currentMonth)) 
+    && !canEditPreviousMonth 
+    && user?.role !== 'ADMIN';
   
   // Use a ref to access latest state inside the interval without restarting it
   const stateRef = React.useRef({ mes, ano, cursoId, dados });
@@ -123,10 +142,15 @@ const ImportarPage = () => {
     }
 
     newDados[docIndex].semanas[weekIndex][field] = val;
+    if (canEditPreviousMonth) {
+      newDados[docIndex].retificada = true;
+      newDados[docIndex].observacoes = "Alterado na retificação (Auditória)";
+    }
     setDados(newDados);
   };
 
   const handleSave = async () => {
+    if (isReadOnly) return;
     setLoading(true);
     try {
       await api.post('/folhas/importar', {
@@ -137,12 +161,49 @@ const ImportarPage = () => {
       });
       setLastSaved(new Date());
       alert('Dados salvos com sucesso!');
-      // Removido o setDados([]) para que os dados continuem na tela
     } catch (err) {
       alert('Erro ao salvar dados: ' + (err.response?.data?.error?.message || err.message));
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchFolha = async (fMes, fAno, fCursoId) => {
+    try {
+      setLoading(true);
+      // Wait, getByCurso is only valid if fCursoId !== 1, but we can call getGeral for 1?
+      // Actually if they select Geral (1), maybe we just clear or we can fetch getGeral.
+      // The endpoint /folhas/curso/1 might route to getByCurso and fail or work if we modified it?
+      // Let's use the explicit endpoint logic we did in RelatoriosPage
+      let endpoint = `/folhas/curso/${fCursoId}?mes=${fMes}&ano=${fAno}`;
+      if (fCursoId === 1) {
+        endpoint = `/folhas/geral?mes=${fMes}&ano=${fAno}`;
+      }
+      
+      const { data } = await api.get(endpoint);
+      if (data && data.length > 0) {
+        setDados(data);
+        setLastSaved(new Date());
+      } else {
+        setDados([]);
+        setLastSaved(null);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFilterChange = (type, value) => {
+    const val = parseInt(value);
+    let newMes = mes, newAno = ano, newCursoId = cursoId;
+
+    if (type === 'mes') { setMes(val); newMes = val; }
+    if (type === 'ano') { setAno(val); newAno = val; }
+    if (type === 'cursoId') { setCursoId(val); newCursoId = val; }
+
+    fetchFolha(newMes, newAno, newCursoId);
   };
 
   const carregarDocentes = async () => {
@@ -216,7 +277,12 @@ const ImportarPage = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          {lastSaved && (
+          {isReadOnly && (
+            <span className="text-sm font-bold text-destructive mr-2">
+              ⚠️ Apenas leitura (Mês passado)
+            </span>
+          )}
+          {lastSaved && !isReadOnly && (
             <span className="text-xs text-muted-foreground animate-in fade-in mr-2">
               Guardado às {lastSaved.toLocaleTimeString()}
             </span>
@@ -227,7 +293,7 @@ const ImportarPage = () => {
                 setDados([]);
               }
             }}
-            disabled={dados.length === 0}
+            disabled={dados.length === 0 || isReadOnly}
             className="bg-destructive/10 hover:bg-destructive/20 text-destructive px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
           >
             <Trash2 size={18} />
@@ -235,19 +301,20 @@ const ImportarPage = () => {
           </button>
           <button 
             onClick={carregarDocentes}
-            className="bg-secondary hover:bg-secondary/80 text-foreground px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium"
+            disabled={isReadOnly}
+            className="bg-secondary hover:bg-secondary/80 text-foreground px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
           >
             <UserPlus size={18} />
             Puxar Docentes
           </button>
-          <label className="bg-secondary hover:bg-secondary/80 text-foreground px-4 py-2 rounded-lg cursor-pointer transition-colors flex items-center gap-2 font-medium">
+          <label className={`bg-secondary hover:bg-secondary/80 text-foreground px-4 py-2 rounded-lg cursor-pointer transition-colors flex items-center gap-2 font-medium ${isReadOnly ? 'opacity-50 pointer-events-none' : ''}`}>
             <Upload size={18} />
             Importar CSV
-            <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" />
+            <input type="file" accept=".csv" onChange={handleFileUpload} className="hidden" disabled={isReadOnly} />
           </label>
           <button 
             onClick={handleSave}
-            disabled={loading || dados.length === 0}
+            disabled={loading || dados.length === 0 || isReadOnly}
             className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20 disabled:opacity-50"
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
@@ -262,7 +329,7 @@ const ImportarPage = () => {
           <label className="text-sm font-semibold text-muted-foreground">Mês de Referência</label>
           <select 
             value={mes} 
-            onChange={(e) => setMes(parseInt(e.target.value))}
+            onChange={(e) => handleFilterChange('mes', e.target.value)}
             className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20"
           >
             {meses.map((m, i) => (
@@ -275,7 +342,7 @@ const ImportarPage = () => {
           <input 
             type="number" 
             value={ano} 
-            onChange={(e) => setAno(parseInt(e.target.value))}
+            onChange={(e) => handleFilterChange('ano', e.target.value)}
             className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20"
           />
         </div>
@@ -283,7 +350,7 @@ const ImportarPage = () => {
           <label className="text-sm font-semibold text-muted-foreground">Curso</label>
           <select 
             value={cursoId} 
-            onChange={(e) => setCursoId(parseInt(e.target.value))}
+            onChange={(e) => handleFilterChange('cursoId', e.target.value)}
             disabled={user?.role !== 'ADMIN'}
             className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-muted"
           >
@@ -328,7 +395,7 @@ const ImportarPage = () => {
             <tbody className="divide-y">
               {dados.map((doc, dIdx) => (
                 <tr key={dIdx} className="hover:bg-muted/30 transition-colors">
-                  <td className="p-2">
+                  <td className="p-2 flex items-center justify-between min-w-[200px]">
                     <input 
                       type="text" 
                       value={doc.docente_nome} 
@@ -337,9 +404,15 @@ const ImportarPage = () => {
                         n[dIdx].docente_nome = e.target.value;
                         setDados(n);
                       }}
+                      disabled={isReadOnly}
                       placeholder="Nome do Docente"
-                      className="w-full bg-transparent border-none focus:ring-0 font-medium"
+                      className="bg-transparent border-none focus:ring-0 font-medium disabled:opacity-70 flex-1 outline-none"
                     />
+                    {(doc.retificada === 1 || doc.retificada === true) && (
+                      <span className="text-[9px] bg-amber-500 text-white font-extrabold px-1.5 py-0.5 rounded shadow ml-2 animate-pulse whitespace-nowrap">
+                        RETIFICADO
+                      </span>
+                    )}
                   </td>
                   {doc.semanas.map((s, sIdx) => (
                     <React.Fragment key={sIdx}>
@@ -348,7 +421,8 @@ const ImportarPage = () => {
                           type="number" 
                           value={s.ap} 
                           onChange={(e) => updateCell(dIdx, sIdx, 'ap', e.target.value)}
-                          className="w-16 text-center bg-transparent border-none focus:ring-0"
+                          disabled={isReadOnly}
+                          className="w-16 text-center bg-transparent border-none focus:ring-0 disabled:opacity-70"
                         />
                       </td>
                       <td className="p-2">
@@ -356,7 +430,8 @@ const ImportarPage = () => {
                           type="number" 
                           value={s.ad} 
                           onChange={(e) => updateCell(dIdx, sIdx, 'ad', e.target.value)}
-                          className="w-16 text-center bg-transparent border-none focus:ring-0 text-primary font-bold"
+                          disabled={isReadOnly}
+                          className="w-16 text-center bg-transparent border-none focus:ring-0 text-primary font-bold disabled:opacity-70"
                         />
                       </td>
                     </React.Fragment>
@@ -370,7 +445,8 @@ const ImportarPage = () => {
                   <td className="p-2 text-center">
                     <button 
                       onClick={() => removeDocente(dIdx)}
-                      className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors"
+                      disabled={isReadOnly}
+                      className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -380,7 +456,7 @@ const ImportarPage = () => {
               {dados.length === 0 && (
                 <tr>
                   <td colSpan={14} className="p-12 text-center text-muted-foreground italic">
-                    Nenhum docente adicionado. Comece por importar um CSV ou adicionar manualmente.
+                    Nenhum docente adicionado. Comece por importar um CSV, puxar docentes ou adicionar manualmente.
                   </td>
                 </tr>
               )}
@@ -390,7 +466,8 @@ const ImportarPage = () => {
         <div className="p-4 border-t bg-secondary/10">
           <button 
             onClick={addDocente}
-            className="flex items-center gap-2 text-primary font-bold hover:underline"
+            disabled={isReadOnly}
+            className="flex items-center gap-2 text-primary font-bold hover:underline disabled:opacity-50 disabled:pointer-events-none disabled:hover:no-underline"
           >
             <Plus size={20} />
             Adicionar Docente

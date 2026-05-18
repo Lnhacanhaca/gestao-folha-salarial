@@ -260,7 +260,14 @@ const RelatoriosPage = () => {
                 return (
                   <tr key={idx} className="border-2 border-black hover:bg-gray-50">
                     <td className="p-1 border-2 border-black">{idx + 1}</td>
-                    <td className="p-1 border-2 border-black text-left">{row.docente_nome}</td>
+                    <td className="p-1 border-2 border-black text-left font-medium">
+                      {row.docente_nome}
+                      {(row.retificada === 1 || row.retificada === true) && (
+                        <span className="text-[8px] text-amber-600 font-extrabold ml-1 uppercase print:text-black">
+                          (Retificada)
+                        </span>
+                      )}
+                    </td>
                     
                     <td className="p-1 border-2 border-black">{s1.ap || 0}</td>
                     <td className="p-1 border-2 border-black">{s1.ad || 0}</td>
