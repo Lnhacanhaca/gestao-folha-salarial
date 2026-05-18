@@ -16,22 +16,6 @@ const ImportarPage = () => {
     if (user) {
       const activeCursoId = user.role !== 'ADMIN' ? user.curso_id : (parseInt(localStorage.getItem('sgfs_cursoId')) || user.curso_id || 2);
       setCursoId(activeCursoId);
-      
-      const savedCursoId = parseInt(localStorage.getItem('sgfs_cursoId'));
-      const savedMes = parseInt(localStorage.getItem('sgfs_mes'));
-      const savedAno = parseInt(localStorage.getItem('sgfs_ano'));
-      
-      if (savedCursoId === activeCursoId && savedMes === mes && savedAno === ano) {
-        try {
-          const saved = localStorage.getItem('sgfs_dados_folha');
-          if (saved) {
-            setDados(JSON.parse(saved));
-            setLastSaved(new Date());
-            return;
-          }
-        } catch (e) {}
-      }
-      
       fetchFolha(mes, ano, activeCursoId);
     }
   }, [user]);
@@ -141,63 +125,87 @@ const ImportarPage = () => {
   const fetchFolha = async (fMes, fAno, fCursoId) => {
     try {
       setLoading(true);
+      
+      // 1. Fetch teachers from Docentes database
+      const { data: docentes } = await api.get('/docentes');
+      
+      // Filter docentes assigned to this course
+      const courseDocentes = docentes.filter(doc => {
+        if (fCursoId === 1) return true; // Geral includes all
+        try {
+          let cursosArray = [];
+          if (typeof doc.cursos === 'string') {
+            const parsed = JSON.parse(doc.cursos);
+            cursosArray = Array.isArray(parsed) ? parsed : [parsed];
+          } else if (Array.isArray(doc.cursos)) {
+            cursosArray = doc.cursos;
+          } else if (typeof doc.cursos === 'number') {
+            cursosArray = [{ id: doc.cursos, ap: 0 }];
+          }
+          return cursosArray.some(c => (c.id || c) === fCursoId);
+        } catch {
+          return false;
+        }
+      });
+
+      // 2. Fetch saved folha from DB
       let endpoint = `/folhas/curso/${fCursoId}?mes=${fMes}&ano=${fAno}`;
       if (fCursoId === 1) {
         endpoint = `/folhas/geral?mes=${fMes}&ano=${fAno}`;
       }
       
-      const { data } = await api.get(endpoint);
-      if (data && data.length > 0) {
-        setDados(data);
-        setLastSaved(new Date());
+      const { data: savedFolha } = await api.get(endpoint);
+
+      if (fCursoId === 1) {
+        // Consolidated report, no merging needed
+        setDados(savedFolha || []);
+        setLastSaved(savedFolha && savedFolha.length > 0 ? new Date() : null);
       } else {
-        if (fCursoId === 1) {
-          setDados([]);
-          setLastSaved(null);
-        } else {
-          const { data: docentes } = await api.get('/docentes');
-          const filtered = docentes.filter(doc => {
-            try {
-              let cursosArray = [{ id: 1, ap: 0 }];
-              if (typeof doc.cursos === 'string') {
-                const parsed = JSON.parse(doc.cursos);
-                cursosArray = Array.isArray(parsed) ? parsed : [parsed];
-              } else if (Array.isArray(doc.cursos)) {
-                cursosArray = doc.cursos;
-              } else if (typeof doc.cursos === 'number') {
-                cursosArray = [{ id: doc.cursos, ap: 0 }];
-              }
-              return cursosArray.some(c => (c.id || c) === fCursoId);
-            } catch {
-              return false;
+        // Map all course teachers to their default structure
+        const defaultMapped = courseDocentes.map(doc => {
+          let apValue = 0;
+          try {
+            let cursosArray = [];
+            if (typeof doc.cursos === 'string') {
+              const parsed = JSON.parse(doc.cursos);
+              cursosArray = Array.isArray(parsed) ? parsed : [parsed];
+            } else if (Array.isArray(doc.cursos)) {
+              cursosArray = doc.cursos;
             }
-          });
+            const cursoObj = cursosArray.find(c => (c.id || c) === fCursoId);
+            if (cursoObj && cursoObj.ap) {
+              apValue = parseFloat(cursoObj.ap);
+            }
+          } catch(e) {}
 
-          const mapped = filtered.map(doc => {
-            let apValue = 0;
-            try {
-              let cursosArray = [];
-              if (typeof doc.cursos === 'string') {
-                const parsed = JSON.parse(doc.cursos);
-                cursosArray = Array.isArray(parsed) ? parsed : [parsed];
-              } else if (Array.isArray(doc.cursos)) {
-                cursosArray = doc.cursos;
-              }
-              const cursoObj = cursosArray.find(c => (c.id || c) === fCursoId);
-              if (cursoObj && cursoObj.ap) {
-                apValue = parseFloat(cursoObj.ap);
-              }
-            } catch(e) {}
+          return {
+            docente_nome: doc.nome,
+            semanas: Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: apValue, ad: 0 })),
+            retificada: 0,
+            observacoes: null
+          };
+        });
 
+        // Merge saved folha with defaultMapped
+        const mergedDados = defaultMapped.map(def => {
+          const saved = savedFolha.find(s => s.docente_nome.trim().toLowerCase() === def.docente_nome.trim().toLowerCase());
+          if (saved) {
             return {
-              docente_nome: doc.nome,
-              semanas: Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: apValue, ad: 0 }))
+              ...def,
+              docente_nome: saved.docente_nome,
+              total_ap: saved.total_ap,
+              total_ad: saved.total_ad,
+              valor_receber: saved.valor_receber,
+              retificada: saved.retificada,
+              observacoes: saved.observacoes,
+              semanas: saved.semanas && saved.semanas.length > 0 ? saved.semanas : def.semanas
             };
-          });
+          }
+          return def;
+        });
 
-          setDados(mapped);
-          setLastSaved(null);
-        }
+        setDados(mergedDados);
+        setLastSaved(savedFolha && savedFolha.length > 0 ? new Date() : null);
       }
     } catch (err) {
       console.error(err);
