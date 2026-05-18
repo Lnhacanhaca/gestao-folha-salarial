@@ -141,10 +141,6 @@ const ImportarPage = () => {
   const fetchFolha = async (fMes, fAno, fCursoId) => {
     try {
       setLoading(true);
-      // Wait, getByCurso is only valid if fCursoId !== 1, but we can call getGeral for 1?
-      // Actually if they select Geral (1), maybe we just clear or we can fetch getGeral.
-      // The endpoint /folhas/curso/1 might route to getByCurso and fail or work if we modified it?
-      // Let's use the explicit endpoint logic we did in RelatoriosPage
       let endpoint = `/folhas/curso/${fCursoId}?mes=${fMes}&ano=${fAno}`;
       if (fCursoId === 1) {
         endpoint = `/folhas/geral?mes=${fMes}&ano=${fAno}`;
@@ -155,8 +151,53 @@ const ImportarPage = () => {
         setDados(data);
         setLastSaved(new Date());
       } else {
-        setDados([]);
-        setLastSaved(null);
+        if (fCursoId === 1) {
+          setDados([]);
+          setLastSaved(null);
+        } else {
+          const { data: docentes } = await api.get('/docentes');
+          const filtered = docentes.filter(doc => {
+            try {
+              let cursosArray = [{ id: 1, ap: 0 }];
+              if (typeof doc.cursos === 'string') {
+                const parsed = JSON.parse(doc.cursos);
+                cursosArray = Array.isArray(parsed) ? parsed : [parsed];
+              } else if (Array.isArray(doc.cursos)) {
+                cursosArray = doc.cursos;
+              } else if (typeof doc.cursos === 'number') {
+                cursosArray = [{ id: doc.cursos, ap: 0 }];
+              }
+              return cursosArray.some(c => (c.id || c) === fCursoId);
+            } catch {
+              return false;
+            }
+          });
+
+          const mapped = filtered.map(doc => {
+            let apValue = 0;
+            try {
+              let cursosArray = [];
+              if (typeof doc.cursos === 'string') {
+                const parsed = JSON.parse(doc.cursos);
+                cursosArray = Array.isArray(parsed) ? parsed : [parsed];
+              } else if (Array.isArray(doc.cursos)) {
+                cursosArray = doc.cursos;
+              }
+              const cursoObj = cursosArray.find(c => (c.id || c) === fCursoId);
+              if (cursoObj && cursoObj.ap) {
+                apValue = parseFloat(cursoObj.ap);
+              }
+            } catch(e) {}
+
+            return {
+              docente_nome: doc.nome,
+              semanas: Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: apValue, ad: 0 }))
+            };
+          });
+
+          setDados(mapped);
+          setLastSaved(null);
+        }
       }
     } catch (err) {
       console.error(err);
@@ -174,64 +215,6 @@ const ImportarPage = () => {
     if (type === 'cursoId') { setCursoId(val); newCursoId = val; }
 
     fetchFolha(newMes, newAno, newCursoId);
-  };
-
-  const carregarDocentes = async () => {
-    try {
-      setLoading(true);
-      const { data } = await api.get('/docentes');
-      
-      const filtered = data.filter(doc => {
-        if (cursoId === 1) return true; // Geral pulls all
-        try {
-          let cursosArray = [{ id: 1, ap: 0 }];
-          if (typeof doc.cursos === 'string') {
-            const parsed = JSON.parse(doc.cursos);
-            cursosArray = Array.isArray(parsed) ? parsed : [parsed];
-          } else if (Array.isArray(doc.cursos)) {
-            cursosArray = doc.cursos;
-          } else if (typeof doc.cursos === 'number') {
-            cursosArray = [{ id: doc.cursos, ap: 0 }];
-          }
-          // Check if any course matches the ID
-          return cursosArray.some(c => (c.id || c) === cursoId);
-        } catch {
-          return true;
-        }
-      });
-
-      if (filtered.length === 0) {
-        alert("Nenhum docente associado a este curso foi encontrado.");
-      }
-
-      const mapped = filtered.map(doc => {
-        let apValue = 0;
-        try {
-          let cursosArray = [];
-          if (typeof doc.cursos === 'string') {
-            const parsed = JSON.parse(doc.cursos);
-            cursosArray = Array.isArray(parsed) ? parsed : [parsed];
-          } else if (Array.isArray(doc.cursos)) {
-            cursosArray = doc.cursos;
-          }
-          const cursoObj = cursosArray.find(c => (c.id || c) === cursoId);
-          if (cursoObj && cursoObj.ap) {
-            apValue = parseFloat(cursoObj.ap);
-          }
-        } catch(e) {}
-
-        return {
-          docente_nome: doc.nome,
-          semanas: Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: apValue, ad: 0 }))
-        };
-      });
-      
-      setDados(mapped);
-    } catch (err) {
-      alert("Erro ao carregar docentes da base de dados.");
-    } finally {
-      setLoading(false);
-    }
   };
 
   const calculateTotal = (semanas, field) => {
@@ -269,14 +252,7 @@ const ImportarPage = () => {
             <Trash2 size={18} />
             Limpar
           </button>
-          <button 
-            onClick={carregarDocentes}
-            disabled={isReadOnly}
-            className="bg-secondary hover:bg-secondary/80 text-foreground px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
-          >
-            <UserPlus size={18} />
-            Puxar Docentes
-          </button>
+
           <button 
             onClick={handleSave}
             disabled={loading || dados.length === 0 || isReadOnly}
@@ -421,7 +397,7 @@ const ImportarPage = () => {
               {dados.length === 0 && (
                 <tr>
                   <td colSpan={14} className="p-12 text-center text-muted-foreground italic">
-                    Nenhum docente adicionado. Comece por importar um CSV, puxar docentes ou adicionar manualmente.
+                    Nenhum docente adicionado para este curso. Adicione manualmente ou importe um CSV.
                   </td>
                 </tr>
               )}
