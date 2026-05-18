@@ -13,7 +13,20 @@ const create = async (req, res, next) => {
   try {
     const { nome, categoria, cursos } = req.body;
     const cursosStr = Array.isArray(cursos) ? JSON.stringify(cursos) : JSON.stringify([1]);
-    const [docente] = await db('docentes').insert({ nome, categoria, cursos: cursosStr }).returning('*');
+    
+    const existing = await db('docentes')
+      .whereRaw('LOWER(nome) = ?', [nome.trim().toLowerCase()])
+      .first();
+
+    if (existing) {
+      const [updated] = await db('docentes')
+        .where({ id: existing.id })
+        .update({ categoria, cursos: cursosStr })
+        .returning('*');
+      return res.status(200).json(updated);
+    }
+
+    const [docente] = await db('docentes').insert({ nome: nome.trim(), categoria, cursos: cursosStr }).returning('*');
     res.status(201).json(docente);
   } catch (error) {
     next(error);

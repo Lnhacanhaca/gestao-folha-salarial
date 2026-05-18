@@ -6,10 +6,12 @@ const importar = async (req, res, next) => {
     const { mes, ano, curso_id, dados } = req.body;
 
     for (const item of dados) {
-      // Find or Create Docente
-      let docente = await trx('docentes').where({ nome: item.docente_nome }).first();
+      const trimmedNome = item.docente_nome.trim();
+      let docente = await trx('docentes')
+        .whereRaw('LOWER(nome) = ?', [trimmedNome.toLowerCase()])
+        .first();
       if (!docente) {
-        [docente] = await trx('docentes').insert({ nome: item.docente_nome }).returning('*');
+        [docente] = await trx('docentes').insert({ nome: trimmedNome }).returning('*');
       }
 
       // Calculate Totals
@@ -137,9 +139,9 @@ const getGeral = async (req, res, next) => {
       }
       
       const g = grouped[f.docente_id];
-      g.total_ap += f.total_ap || 0;
-      g.total_ad += f.total_ad || 0;
-      g.valor_receber += f.valor_receber || 0;
+      g.total_ap += Number(f.total_ap) || 0;
+      g.total_ad += Number(f.total_ad) || 0;
+      g.valor_receber += Number(f.valor_receber) || 0;
       g.retificada = g.retificada || f.retificada || 0;
       if (f.observacoes) {
         g.observacoes = g.observacoes ? `${g.observacoes}; ${f.observacoes}` : f.observacoes;
@@ -149,8 +151,8 @@ const getGeral = async (req, res, next) => {
       f_detalhes.forEach(d => {
         const idx = d.semana - 1;
         if (idx >= 0 && idx < 5) {
-          g.semanas[idx].ap += d.ap || 0;
-          g.semanas[idx].ad += d.ad || 0;
+          g.semanas[idx].ap += Number(d.ap) || 0;
+          g.semanas[idx].ad += Number(d.ad) || 0;
         }
       });
     }
