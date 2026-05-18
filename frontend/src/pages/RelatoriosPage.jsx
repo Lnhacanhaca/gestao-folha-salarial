@@ -263,7 +263,7 @@ const RelatoriosPage = () => {
                     <td className="p-1 border-2 border-black text-left font-medium">
                       {row.docente_nome}
                       {(row.retificada === 1 || row.retificada === true) && (
-                        <span className="text-[8px] text-amber-600 font-extrabold ml-1 uppercase print:text-black">
+                        <span className="text-[8px] text-amber-600 font-extrabold ml-1 print:text-black">
                           (Retificada)
                         </span>
                       )}

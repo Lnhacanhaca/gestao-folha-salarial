@@ -409,8 +409,8 @@ const ImportarPage = () => {
                       className="bg-transparent border-none focus:ring-0 font-medium disabled:opacity-70 flex-1 outline-none"
                     />
                     {(doc.retificada === 1 || doc.retificada === true) && (
-                      <span className="text-[9px] bg-amber-500 text-white font-extrabold px-1.5 py-0.5 rounded shadow ml-2 animate-pulse whitespace-nowrap">
-                        RETIFICADO
+                      <span className="text-[10px] text-amber-600 font-extrabold ml-2 animate-pulse whitespace-nowrap">
+                        (Retificada)
                       </span>
                     )}
                   </td>
