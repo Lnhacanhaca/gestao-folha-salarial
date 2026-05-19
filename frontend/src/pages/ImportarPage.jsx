@@ -49,6 +49,8 @@ const ImportarPage = () => {
   const [dados, setDados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
+  const [inputMode, setInputMode] = useState('matrix'); // 'matrix' or 'individual'
+  const [selectedDocenteIndex, setSelectedDocenteIndex] = useState(0);
 
   useEffect(() => {
     if (user) {
@@ -278,6 +280,8 @@ const ImportarPage = () => {
   };
 
   const weekRanges = getWeeksDateRanges(mes, ano);
+  const activeDocenteIndex = Math.min(selectedDocenteIndex, Math.max(0, dados.length - 1));
+  const selectedDocente = dados[activeDocenteIndex];
 
   return (
     <div className="space-y-6">
@@ -285,6 +289,21 @@ const ImportarPage = () => {
         <div>
           <h1 className="text-3xl font-bold">Lançamento de Horas</h1>
           <p className="text-muted-foreground">Introduza manualmente as horas e aulas dadas dos docentes</p>
+          
+          <div className="flex bg-secondary/50 p-1 rounded-xl border select-none w-fit mt-3">
+            <button
+              onClick={() => setInputMode('matrix')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${inputMode === 'matrix' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Vista Geral (Tabela)
+            </button>
+            <button
+              onClick={() => setInputMode('individual')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${inputMode === 'individual' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Docente por Docente
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -363,121 +382,278 @@ const ImportarPage = () => {
         </div>
       </div>
 
-      {/* Matrix Table */}
-      <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
-            <thead>
-              <tr className="bg-secondary/50 border-b">
-                <th className="p-4 font-bold text-sm w-64">Docente</th>
-                {[1, 2, 3, 4, 5].map((w, idx) => (
-                  <th key={w} className="p-4 font-bold text-sm text-center border-l" colSpan={2}>
-                    Semana {w}
-                    <span className="block text-[10px] text-muted-foreground font-normal mt-0.5">
-                      {weekRanges[idx]}
-                    </span>
-                  </th>
-                ))}
-                <th className="p-4 font-bold text-sm text-center border-l bg-primary/5" colSpan={2}>
-                  Total Mensal
-                </th>
-                <th className="p-4 w-16"></th>
-              </tr>
-              <tr className="bg-secondary/30 border-b text-xs uppercase tracking-wider text-muted-foreground">
-                <th className="p-2">Nome</th>
-                {[1, 2, 3, 4, 5].map(w => (
-                  <React.Fragment key={w}>
-                    <th className="p-2 text-center border-l">AP</th>
-                    <th className="p-2 text-center">AD</th>
-                  </React.Fragment>
-                ))}
-                <th className="p-2 text-center border-l bg-primary/5">AP</th>
-                <th className="p-2 text-center bg-primary/5">AD</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {dados.map((doc, dIdx) => (
-                <tr key={dIdx} className="hover:bg-muted/30 transition-colors">
-                  <td className="p-2 flex items-center justify-between min-w-[200px]">
-                    <input 
-                      type="text" 
-                      value={doc.docente_nome} 
+      {/* Input Mode Conditional Rendering */}
+      {inputMode === 'individual' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-300">
+          {/* Left Column: Sidebar of Docentes */}
+          <div className="lg:col-span-1 bg-card rounded-2xl border shadow-sm flex flex-col h-[550px] overflow-hidden">
+            <div className="p-4 border-b bg-secondary/10 flex items-center justify-between">
+              <h3 className="font-bold text-sm">Docentes ({dados.length})</h3>
+              <button
+                onClick={addDocente}
+                disabled={isReadOnly}
+                className="text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors disabled:opacity-50"
+                title="Adicionar Docente"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto divide-y">
+              {dados.map((doc, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setSelectedDocenteIndex(idx)}
+                  className={`w-full text-left p-3.5 flex flex-col gap-1 transition-all ${
+                    idx === activeDocenteIndex 
+                      ? 'bg-primary/5 border-l-4 border-primary' 
+                      : 'hover:bg-muted/30 border-l-4 border-transparent'
+                  }`}
+                >
+                  <span className="text-xs font-bold truncate block w-full">
+                    {doc.docente_nome || `Sem nome (${idx + 1})`}
+                  </span>
+                  <div className="flex justify-between items-center text-[10px] text-muted-foreground w-full">
+                    <span>AP: {calculateTotal(doc.semanas, 'ap')}h</span>
+                    <span className="text-primary font-bold">AD: {calculateTotal(doc.semanas, 'ad')}h</span>
+                  </div>
+                </button>
+              ))}
+              
+              {dados.length === 0 && (
+                <div className="p-8 text-center text-xs text-muted-foreground italic">
+                  Nenhum docente adicionado.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Focused Edit Form */}
+          <div className="lg:col-span-3 bg-card rounded-2xl border shadow-sm p-6 flex flex-col justify-between min-h-[550px]">
+            {selectedDocente ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b">
+                  <div className="flex-1 max-w-md">
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Nome do Docente</label>
+                    <input
+                      type="text"
+                      value={selectedDocente.docente_nome}
                       onChange={(e) => {
                         const n = [...dados];
-                        n[dIdx].docente_nome = e.target.value;
+                        n[activeDocenteIndex].docente_nome = e.target.value;
                         setDados(n);
                       }}
                       disabled={isReadOnly}
                       placeholder="Nome do Docente"
-                      className="bg-transparent border-none focus:ring-0 font-medium disabled:opacity-70 flex-1 outline-none"
+                      className="bg-transparent border-b border-muted hover:border-foreground focus:border-primary text-lg font-bold w-full pb-1 outline-none transition-colors"
                     />
-                    {(doc.retificada === 1 || doc.retificada === true) && (
-                      <span className="text-[10px] text-amber-600 font-extrabold ml-2 animate-pulse whitespace-nowrap">
-                        (Retificada)
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {(selectedDocente.retificada === 1 || selectedDocente.retificada === true) && (
+                      <span className="text-[10px] text-amber-600 font-extrabold bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                        Retificada
                       </span>
                     )}
-                  </td>
-                  {doc.semanas.map((s, sIdx) => (
-                    <React.Fragment key={sIdx}>
-                      <td className="p-2 border-l">
-                        <input 
-                          type="number" 
-                          value={s.ap} 
-                          onChange={(e) => updateCell(dIdx, sIdx, 'ap', e.target.value)}
-                          disabled={isReadOnly}
-                          className="w-16 text-center bg-transparent border-none focus:ring-0 disabled:opacity-70"
-                        />
-                      </td>
-                      <td className="p-2">
-                        <input 
-                          type="number" 
-                          value={s.ad} 
-                          onChange={(e) => updateCell(dIdx, sIdx, 'ad', e.target.value)}
-                          disabled={isReadOnly}
-                          className="w-16 text-center bg-transparent border-none focus:ring-0 text-primary font-bold disabled:opacity-70"
-                        />
-                      </td>
+                    <button
+                      onClick={() => removeDocente(activeDocenteIndex)}
+                      disabled={isReadOnly}
+                      className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30"
+                      title="Remover Docente"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5 Weeks Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  {selectedDocente.semanas.map((s, sIdx) => (
+                    <div key={sIdx} className="bg-secondary/20 p-4 rounded-xl border flex flex-col gap-3 relative overflow-hidden">
+                      <div className="absolute top-0 left-0 right-0 h-1 bg-primary/20" />
+                      <div className="text-center">
+                        <span className="text-xs font-bold text-slate-800">Semana {s.semana}</span>
+                        <span className="block text-[9px] text-muted-foreground mt-0.5 min-h-[24px]">
+                          {weekRanges[sIdx]}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">AP</label>
+                          <input
+                            type="number"
+                            value={s.ap}
+                            onChange={(e) => updateCell(activeDocenteIndex, sIdx, 'ap', e.target.value)}
+                            disabled={isReadOnly}
+                            className="w-full bg-background border rounded-lg p-2 text-center text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                            placeholder="0"
+                            min="0"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">AD</label>
+                          <input
+                            type="number"
+                            value={s.ad}
+                            onChange={(e) => updateCell(activeDocenteIndex, sIdx, 'ad', e.target.value)}
+                            disabled={isReadOnly}
+                            className="w-full bg-background border rounded-lg p-2 text-center text-xs font-bold text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                            placeholder="0"
+                            min="0"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Total box for selected teacher */}
+                <div className="bg-secondary/10 border p-4 rounded-xl flex flex-wrap items-center justify-around gap-4 text-center mt-6">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total AP</span>
+                    <span className="text-lg font-black text-slate-800">{calculateTotal(selectedDocente.semanas, 'ap')}h</span>
+                  </div>
+                  <div className="w-px h-8 bg-muted" />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total AD</span>
+                    <span className="text-lg font-black text-primary">{calculateTotal(selectedDocente.semanas, 'ad')}h</span>
+                  </div>
+                  <div className="w-px h-8 bg-muted" />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground block">Valor a Receber</span>
+                    <span className="text-lg font-black text-emerald-600">
+                      {(calculateTotal(selectedDocente.semanas, 'ad') * 500).toLocaleString('pt-MZ')} Mt
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center text-center p-12 text-muted-foreground">
+                <UserPlus size={48} className="text-muted-foreground/50 mb-3" />
+                <p className="font-medium text-sm">Nenhum docente seleccionado.</p>
+                <p className="text-xs mt-1">Adicione um novo docente ou seleccione-o na barra lateral esquerda.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* Matrix Table */
+        <div className="bg-card rounded-2xl border shadow-sm overflow-hidden animate-in fade-in duration-300">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
+              <thead>
+                <tr className="bg-secondary/50 border-b">
+                  <th className="p-4 font-bold text-sm w-64">Docente</th>
+                  {[1, 2, 3, 4, 5].map((w, idx) => (
+                    <th key={w} className="p-4 font-bold text-sm text-center border-l" colSpan={2}>
+                      Semana {w}
+                      <span className="block text-[10px] text-muted-foreground font-normal mt-0.5">
+                        {weekRanges[idx]}
+                      </span>
+                    </th>
+                  ))}
+                  <th className="p-4 font-bold text-sm text-center border-l bg-primary/5" colSpan={2}>
+                    Total Mensal
+                  </th>
+                  <th className="p-4 w-16"></th>
+                </tr>
+                <tr className="bg-secondary/30 border-b text-xs uppercase tracking-wider text-muted-foreground">
+                  <th className="p-2">Nome</th>
+                  {[1, 2, 3, 4, 5].map(w => (
+                    <React.Fragment key={w}>
+                      <th className="p-2 text-center border-l">AP</th>
+                      <th className="p-2 text-center">AD</th>
                     </React.Fragment>
                   ))}
-                  <td className="p-2 border-l bg-primary/5 text-center font-bold">
-                    {calculateTotal(doc.semanas, 'ap')}
-                  </td>
-                  <td className="p-2 bg-primary/5 text-center font-bold text-primary">
-                    {calculateTotal(doc.semanas, 'ad')}
-                  </td>
-                  <td className="p-2 text-center">
-                    <button 
-                      onClick={() => removeDocente(dIdx)}
-                      disabled={isReadOnly}
-                      className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </td>
+                  <th className="p-2 text-center border-l bg-primary/5">AP</th>
+                  <th className="p-2 text-center bg-primary/5">AD</th>
+                  <th></th>
                 </tr>
-              ))}
-              {dados.length === 0 && (
-                <tr>
-                  <td colSpan={14} className="p-12 text-center text-muted-foreground italic">
-                    Nenhum docente adicionado para este curso. Adicione manualmente ou importe um CSV.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y">
+                {dados.map((doc, dIdx) => (
+                  <tr key={dIdx} className="hover:bg-muted/30 transition-colors">
+                    <td className="p-2 flex items-center justify-between min-w-[200px]">
+                      <input 
+                        type="text" 
+                        value={doc.docente_nome} 
+                        onChange={(e) => {
+                          const n = [...dados];
+                          n[dIdx].docente_nome = e.target.value;
+                          setDados(n);
+                        }}
+                        disabled={isReadOnly}
+                        placeholder="Nome do Docente"
+                        className="bg-transparent border-none focus:ring-0 font-medium disabled:opacity-70 flex-1 outline-none"
+                      />
+                      {(doc.retificada === 1 || doc.retificada === true) && (
+                        <span className="text-[10px] text-amber-600 font-extrabold ml-2 animate-pulse whitespace-nowrap">
+                          (Retificada)
+                        </span>
+                      )}
+                    </td>
+                    {doc.semanas.map((s, sIdx) => (
+                      <React.Fragment key={sIdx}>
+                        <td className="p-2 border-l">
+                          <input 
+                            type="number" 
+                            value={s.ap} 
+                            onChange={(e) => updateCell(dIdx, sIdx, 'ap', e.target.value)}
+                            disabled={isReadOnly}
+                            className="w-16 text-center bg-transparent border-none focus:ring-0 disabled:opacity-70"
+                          />
+                        </td>
+                        <td className="p-2">
+                          <input 
+                            type="number" 
+                            value={s.ad} 
+                            onChange={(e) => updateCell(dIdx, sIdx, 'ad', e.target.value)}
+                            disabled={isReadOnly}
+                            className="w-16 text-center bg-transparent border-none focus:ring-0 text-primary font-bold disabled:opacity-70"
+                          />
+                        </td>
+                      </React.Fragment>
+                    ))}
+                    <td className="p-2 border-l bg-primary/5 text-center font-bold">
+                      {calculateTotal(doc.semanas, 'ap')}
+                    </td>
+                    <td className="p-2 bg-primary/5 text-center font-bold text-primary">
+                      {calculateTotal(doc.semanas, 'ad')}
+                    </td>
+                    <td className="p-2 text-center">
+                      <button 
+                        onClick={() => removeDocente(dIdx)}
+                        disabled={isReadOnly}
+                        className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {dados.length === 0 && (
+                  <tr>
+                    <td colSpan={14} className="p-12 text-center text-muted-foreground italic">
+                      Nenhum docente adicionado para este curso. Adicione manualmente ou importe um CSV.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-4 border-t bg-secondary/10">
+            <button 
+              onClick={addDocente}
+              disabled={isReadOnly}
+              className="flex items-center gap-2 text-primary font-bold hover:underline disabled:opacity-50 disabled:pointer-events-none disabled:hover:no-underline"
+            >
+              <Plus size={20} />
+              Adicionar Docente
+            </button>
+          </div>
         </div>
-        <div className="p-4 border-t bg-secondary/10">
-          <button 
-            onClick={addDocente}
-            disabled={isReadOnly}
-            className="flex items-center gap-2 text-primary font-bold hover:underline disabled:opacity-50 disabled:pointer-events-none disabled:hover:no-underline"
-          >
-            <Plus size={20} />
-            Adicionar Docente
-          </button>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
