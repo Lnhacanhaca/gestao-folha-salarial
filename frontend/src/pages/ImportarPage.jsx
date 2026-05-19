@@ -3,6 +3,33 @@ import { Plus, Trash2, Save, Loader2, UserPlus } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
+const getWeeksDateRanges = (mes, ano) => {
+  const ranges = [];
+  const firstDayOfMonth = new Date(ano, mes - 1, 1);
+  let dayOfWeek = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  
+  // Determine Monday of the week containing the 1st
+  let diffToMonday = 1 - dayOfWeek;
+  if (dayOfWeek === 0) diffToMonday = -6;
+  
+  const startMonday = new Date(firstDayOfMonth);
+  startMonday.setDate(firstDayOfMonth.getDate() + diffToMonday);
+  
+  for (let w = 0; w < 5; w++) {
+    const mon = new Date(startMonday);
+    mon.setDate(startMonday.getDate() + (w * 7));
+    
+    const fri = new Date(mon);
+    fri.setDate(mon.getDate() + 4);
+    
+    const monStr = String(mon.getDate()).padStart(2, '0') + '/' + String(mon.getMonth() + 1).padStart(2, '0');
+    const friStr = String(fri.getDate()).padStart(2, '0') + '/' + String(fri.getMonth() + 1).padStart(2, '0') + '/' + fri.getFullYear();
+    
+    ranges.push(`${monStr} - ${friStr}`);
+  }
+  return ranges;
+};
+
 const ImportarPage = () => {
   const { user } = useAuth();
   const [mes, setMes] = useState(() => parseInt(localStorage.getItem('sgfs_mes')) || new Date().getMonth() + 1);
@@ -239,6 +266,8 @@ const ImportarPage = () => {
     return semanas.reduce((acc, s) => acc + (s[field] || 0), 0);
   };
 
+  const weekRanges = getWeeksDateRanges(mes, ano);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -328,9 +357,12 @@ const ImportarPage = () => {
             <thead>
               <tr className="bg-secondary/50 border-b">
                 <th className="p-4 font-bold text-sm w-64">Docente</th>
-                {[1, 2, 3, 4, 5].map(w => (
+                {[1, 2, 3, 4, 5].map((w, idx) => (
                   <th key={w} className="p-4 font-bold text-sm text-center border-l" colSpan={2}>
                     Semana {w}
+                    <span className="block text-[10px] text-muted-foreground font-normal mt-0.5">
+                      {weekRanges[idx]}
+                    </span>
                   </th>
                 ))}
                 <th className="p-4 font-bold text-sm text-center border-l bg-primary/5" colSpan={2}>

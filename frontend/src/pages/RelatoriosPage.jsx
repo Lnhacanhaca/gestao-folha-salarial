@@ -4,6 +4,33 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { numeroPorExtenso } from '../lib/extenso';
 
+const getWeeksDateRanges = (mes, ano) => {
+  const ranges = [];
+  const firstDayOfMonth = new Date(ano, mes - 1, 1);
+  let dayOfWeek = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  
+  // Determine Monday of the week containing the 1st
+  let diffToMonday = 1 - dayOfWeek;
+  if (dayOfWeek === 0) diffToMonday = -6;
+  
+  const startMonday = new Date(firstDayOfMonth);
+  startMonday.setDate(firstDayOfMonth.getDate() + diffToMonday);
+  
+  for (let w = 0; w < 5; w++) {
+    const mon = new Date(startMonday);
+    mon.setDate(startMonday.getDate() + (w * 7));
+    
+    const fri = new Date(mon);
+    fri.setDate(mon.getDate() + 4);
+    
+    const monStr = String(mon.getDate()).padStart(2, '0') + '/' + String(mon.getMonth() + 1).padStart(2, '0');
+    const friStr = String(fri.getDate()).padStart(2, '0') + '/' + String(fri.getMonth() + 1).padStart(2, '0') + '/' + fri.getFullYear();
+    
+    ranges.push(`${monStr} - ${friStr}`);
+  }
+  return ranges;
+};
+
 const RelatoriosPage = () => {
   const { user } = useAuth();
   const [mes, setMes] = useState(new Date().getMonth() + 1);
@@ -58,6 +85,8 @@ const RelatoriosPage = () => {
   useEffect(() => {
     if (cursoId !== 1) setViewMode('folha');
   }, [cursoId]);
+
+  const weekRanges = getWeeksDateRanges(mes, ano);
 
   return (
     <div className="space-y-6">
@@ -257,11 +286,26 @@ const RelatoriosPage = () => {
                     <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Valor a Receber das Aulas</th>
                   </tr>
                   <tr className="bg-gray-200 border-2 border-black">
-                    <th colSpan={2} className="p-1 border-2 border-black">1ª Semana</th>
-                    <th colSpan={2} className="p-1 border-2 border-black">2ª Semana</th>
-                    <th colSpan={2} className="p-1 border-2 border-black">3ª Semana</th>
-                    <th colSpan={2} className="p-1 border-2 border-black">4ª Semana</th>
-                    <th colSpan={2} className="p-1 border-2 border-black">5ª Semana</th>
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                      1ª Semana
+                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[0]})</span>
+                    </th>
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                      2ª Semana
+                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[1]})</span>
+                    </th>
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                      3ª Semana
+                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[2]})</span>
+                    </th>
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                      4ª Semana
+                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[3]})</span>
+                    </th>
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                      5ª Semana
+                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[4]})</span>
+                    </th>
                   </tr>
                   <tr className="bg-gray-200 border-2 border-black text-[9px]">
                     <th className="p-1 border-2 border-black w-8">AP</th>
