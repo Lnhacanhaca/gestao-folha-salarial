@@ -159,11 +159,11 @@ const AuditPage = () => {
           <p className="text-muted-foreground">Registo de atividades de segurança e ações realizadas no SGFS</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
           <button 
             onClick={handleExportCSV}
             disabled={!filteredLogs || filteredLogs.length === 0}
-            className="bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-sm disabled:opacity-50"
+            className="w-full sm:w-auto justify-center bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-sm disabled:opacity-50"
           >
             <Download size={20} />
             Exportar CSV
@@ -172,7 +172,7 @@ const AuditPage = () => {
           <button 
             onClick={handleClearAll}
             disabled={!logs || logs.length === 0}
-            className="bg-destructive hover:bg-destructive/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-destructive/20 disabled:opacity-50"
+            className="w-full sm:w-auto justify-center bg-destructive hover:bg-destructive/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-destructive/20 disabled:opacity-50"
           >
             <Trash2 size={20} />
             Limpar Histórico

@@ -366,8 +366,8 @@ const DocentesPage = () => {
           <p className="text-muted-foreground">Gestão unificada de professores do Curso Nocturno</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <label className={`bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg cursor-pointer transition-all flex items-center gap-2 font-bold shadow-sm ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+          <label className={`w-full sm:w-auto justify-center bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg cursor-pointer transition-all flex items-center gap-2 font-bold shadow-sm ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
             {importing ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
             Importar CSV
             <input type="file" accept=".csv" onChange={handleCSVImport} className="hidden" disabled={importing} />
@@ -375,7 +375,7 @@ const DocentesPage = () => {
 
           <button 
             onClick={handleCSVExport}
-            className="bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-sm"
+            className="w-full sm:w-auto justify-center bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-sm"
           >
             <Download size={20} />
             Exportar CSV
@@ -383,7 +383,7 @@ const DocentesPage = () => {
 
           <button 
             onClick={() => openModal()}
-            className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20"
+            className="w-full sm:w-auto justify-center bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20"
           >
             <UserPlus size={20} />
             Novo Docente
@@ -392,7 +392,7 @@ const DocentesPage = () => {
           {docentes && docentes.length > 0 && (
             <button 
               onClick={handleClearAll}
-              className="bg-destructive hover:bg-destructive/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-destructive/20"
+              className="w-full sm:w-auto justify-center bg-destructive hover:bg-destructive/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-destructive/20"
             >
               <Trash2 size={20} />
               Eliminar Tudo
@@ -653,18 +653,18 @@ const DocentesPage = () => {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-3 pt-4">
                 <button 
                   type="button" 
                   onClick={closeModal}
-                  className="px-4 py-2 text-muted-foreground hover:bg-secondary/50 rounded-lg transition-colors font-medium"
+                  className="w-full sm:w-auto justify-center px-4 py-2 text-muted-foreground hover:bg-secondary/50 rounded-lg transition-colors font-medium"
                 >
                   Cancelar
                 </button>
                 <button 
                   type="submit"
                   disabled={createMutation.isPending || updateMutation.isPending}
-                  className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all font-bold shadow-lg shadow-primary/20 flex items-center gap-2"
+                  className="w-full sm:w-auto justify-center bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all font-bold shadow-lg shadow-primary/20 flex items-center gap-2"
                 >
                   {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="animate-spin" size={16} />}
                   Salvar

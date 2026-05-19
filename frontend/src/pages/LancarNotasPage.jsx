@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, Loader2, UserPlus } from 'lucide-react';
+import { Plus, Trash2, Save, Loader2, UserPlus, Menu, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -53,6 +53,7 @@ const LancarNotasPage = () => {
   const [lastSaved, setLastSaved] = useState(null);
   const [inputMode, setInputMode] = useState('matrix'); // 'matrix' or 'individual'
   const [selectedDocenteIndex, setSelectedDocenteIndex] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -423,30 +424,30 @@ const LancarNotasPage = () => {
           <h1 className="text-3xl font-bold">Lançamento de Horas</h1>
           <p className="text-muted-foreground">Introduza manualmente as horas e aulas dadas dos docentes</p>
           
-          <div className="flex bg-secondary/50 p-1 rounded-xl border select-none w-fit mt-3">
+          <div className="flex flex-col sm:flex-row bg-secondary/50 p-1 rounded-xl border select-none w-full sm:w-fit mt-3 gap-1 sm:gap-0">
             <button
               onClick={() => setInputMode('matrix')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${inputMode === 'matrix' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`w-full sm:w-auto px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${inputMode === 'matrix' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Vista Geral (Tabela)
             </button>
             <button
               onClick={() => setInputMode('individual')}
-              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${inputMode === 'individual' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`w-full sm:w-auto px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${inputMode === 'individual' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Docente por Docente
             </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
           {isReadOnly && (
-            <span className="text-sm font-bold text-destructive mr-2">
+            <span className="text-sm font-bold text-destructive mr-2 text-center w-full sm:w-auto">
               ⚠️ Apenas leitura (Mês passado)
             </span>
           )}
           {lastSaved && !isReadOnly && (
-            <span className="text-xs text-muted-foreground animate-in fade-in mr-2">
+            <span className="text-xs text-muted-foreground animate-in fade-in mr-2 text-center w-full sm:w-auto">
               Guardado às {lastSaved.toLocaleTimeString()}
             </span>
           )}
@@ -466,7 +467,7 @@ const LancarNotasPage = () => {
               ), { duration: Infinity, style: { minWidth: '350px' } });
             }}
             disabled={dados.length === 0 || isReadOnly}
-            className="bg-destructive/10 hover:bg-destructive/20 text-destructive px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
+            className="bg-destructive/10 hover:bg-destructive/20 text-destructive px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 font-medium disabled:opacity-50 w-full sm:w-auto"
           >
             <Trash2 size={18} />
             Limpar
@@ -475,10 +476,10 @@ const LancarNotasPage = () => {
           <button 
             onClick={handleSave}
             disabled={loading || dados.length === 0 || isReadOnly}
-            className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20 disabled:opacity-50"
+            className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20 disabled:opacity-50 w-full sm:w-auto"
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-            Gravar Folha
+            Gravar Dados
           </button>
         </div>
       </div>
@@ -546,17 +547,25 @@ const LancarNotasPage = () => {
       {inputMode === 'individual' ? (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-300">
           {/* Left Column: Sidebar of Docentes */}
-          <div className="lg:col-span-1 bg-card rounded-2xl border shadow-sm flex flex-col h-[550px] overflow-hidden">
+          <div className={`lg:col-span-1 bg-card rounded-2xl border shadow-sm flex-col h-[550px] overflow-hidden ${isSidebarOpen ? 'flex absolute inset-0 z-50 m-4 shadow-2xl' : 'hidden lg:flex'}`}>
             <div className="p-4 border-b bg-secondary/10 flex items-center justify-between">
               <h3 className="font-bold text-sm">Docentes ({dados.length})</h3>
-              <button
-                onClick={addDocente}
-                disabled={isReadOnly}
-                className="text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors disabled:opacity-50"
-                title="Adicionar Docente"
-              >
-                <Plus size={16} />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={addDocente}
+                  disabled={isReadOnly}
+                  className="text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors disabled:opacity-50"
+                  title="Adicionar Docente"
+                >
+                  <Plus size={16} />
+                </button>
+                <button
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="lg:hidden text-muted-foreground hover:bg-secondary p-1.5 rounded-lg transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
             </div>
             
             <div className="flex-1 overflow-y-auto divide-y">
@@ -592,24 +601,32 @@ const LancarNotasPage = () => {
           <div className="lg:col-span-3 bg-card rounded-2xl border shadow-sm p-6 flex flex-col justify-between min-h-[550px]">
             {selectedDocente ? (
               <div className="space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b">
-                  <div className="flex-1 max-w-md">
-                    <label className="text-xs font-semibold text-muted-foreground block mb-1">Nome do Docente</label>
-                    <input
-                      type="text"
-                      value={selectedDocente.docente_nome}
-                      onChange={(e) => {
-                        const n = [...dados];
-                        n[activeDocenteIndex].docente_nome = e.target.value;
-                        setDados(n);
-                      }}
-                      disabled={isReadOnly}
-                      placeholder="Nome do Docente"
-                      className="bg-transparent border-b border-muted hover:border-foreground focus:border-primary text-lg font-bold w-full pb-1 outline-none transition-colors"
-                    />
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b">
+                  <div className="flex-1 w-full max-w-md flex items-center gap-2">
+                    <button 
+                      onClick={() => setIsSidebarOpen(true)}
+                      className="lg:hidden p-2 text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors flex-shrink-0"
+                    >
+                      <Menu size={18} />
+                    </button>
+                    <div className="w-full">
+                      <label className="text-xs font-semibold text-muted-foreground block mb-1">Nome do Docente</label>
+                      <input
+                        type="text"
+                        value={selectedDocente.docente_nome}
+                        onChange={(e) => {
+                          const n = [...dados];
+                          n[activeDocenteIndex].docente_nome = e.target.value;
+                          setDados(n);
+                        }}
+                        disabled={isReadOnly}
+                        placeholder="Nome do Docente"
+                        className="bg-transparent border-b border-muted hover:border-foreground focus:border-primary text-lg font-bold w-full pb-1 outline-none transition-colors"
+                      />
+                    </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     {(selectedDocente.retificada === 1 || selectedDocente.retificada === true) && (
                       <span className="text-[10px] text-amber-600 font-extrabold bg-amber-50 px-2 py-1 rounded border border-amber-200">
                         Retificada
@@ -618,11 +635,11 @@ const LancarNotasPage = () => {
                     <button
                       onClick={() => handleSaveDocente(activeDocenteIndex)}
                       disabled={loading || isReadOnly}
-                      className="bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-bold disabled:opacity-50"
-                      title="Gravar este docente"
+                      className="flex-1 sm:flex-none justify-center bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-xs font-bold disabled:opacity-50 shadow-md shadow-primary/20"
+                      title="Salvar horas lançadas para este docente"
                     >
-                      <Save size={14} />
-                      <span>Gravar Docente</span>
+                      <Save size={16} />
+                      <span>Salvar Horas Lançadas</span>
                     </button>
                     <button
                       onClick={() => handleRemoveDocente(activeDocenteIndex)}
@@ -636,9 +653,9 @@ const LancarNotasPage = () => {
                 </div>
 
                 {/* 5 Weeks Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <div className="flex overflow-x-auto md:grid md:grid-cols-5 gap-4 pb-4">
                   {selectedDocente.semanas.map((s, sIdx) => (
-                    <div key={sIdx} className="bg-secondary/20 p-4 rounded-xl border flex flex-col gap-3 relative overflow-hidden">
+                    <div key={sIdx} className="bg-secondary/20 p-4 rounded-xl border flex flex-col gap-3 relative overflow-hidden min-w-[140px] flex-shrink-0 md:flex-shrink">
                       <div className="absolute top-0 left-0 right-0 h-1 bg-primary/20" />
                       <div className="text-center">
                         <span className="text-xs font-bold text-slate-800">Semana {s.semana}</span>
@@ -660,14 +677,14 @@ const LancarNotasPage = () => {
                             min="0"
                           />
                         </div>
-                        <div>
-                          <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">AD</label>
+                        <div className="mt-3 p-2.5 bg-primary/10 border-2 border-primary/30 rounded-xl shadow-sm relative transition-all focus-within:border-primary/60 focus-within:bg-primary/15">
+                          <label className="text-[11px] font-black text-primary uppercase tracking-wider block mb-1">Aulas Dadas (AD)</label>
                           <input
                             type="number"
                             value={s.ad}
                             onChange={(e) => updateCell(activeDocenteIndex, sIdx, 'ad', e.target.value)}
                             disabled={isReadOnly}
-                            className="w-full bg-background border rounded-lg p-2 text-center text-xs font-bold text-primary outline-none focus:ring-2 focus:ring-primary/20"
+                            className="w-full bg-white border border-primary/20 rounded-lg p-2.5 text-center text-sm font-black text-primary outline-none focus:ring-2 focus:ring-primary shadow-inner"
                             placeholder="0"
                             min="0"
                           />
