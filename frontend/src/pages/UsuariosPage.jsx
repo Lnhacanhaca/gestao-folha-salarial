@@ -10,7 +10,7 @@ const UsuariosPage = () => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    role: 'DIRETOR_CURSO',
+    role: 'USER',
     curso_id: 2
   });
 
@@ -75,7 +75,7 @@ const UsuariosPage = () => {
       setFormData({
         username: '',
         password: '',
-        role: 'DIRETOR_CURSO',
+        role: 'USER',
         curso_id: 2
       });
     }
@@ -130,6 +130,21 @@ const UsuariosPage = () => {
     6: "Engenharia Informática"
   };
 
+  // Mapping: curso_id => courses managed in dashboard (same logic as Dashboard.jsx)
+  const CURSOS_GERIDOS_LABEL = {
+    2: "Contabilidade e Auditoria + Contabilidade e Administração Pública",
+    3: "Contabilidade e Auditoria + Contabilidade e Administração Pública",
+    4: "Engenharia de Minas + Processamento Mineral",
+    5: "Engenharia de Minas + Processamento Mineral",
+    6: "Engenharia Informática"
+  };
+
+  const CURSOS_OPCOES = [
+    { value: 2, label: "Director de Contabilidade e Auditoria", detail: "Gere: Contabilidade e Auditoria + Contabilidade e Administração Pública" },
+    { value: 4, label: "Director de Engenharia de Minas", detail: "Gere: Engenharia de Minas + Processamento Mineral" },
+    { value: 6, label: "Director de Engenharia Informática", detail: "Gere: Engenharia Informática" }
+  ];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -170,9 +185,14 @@ const UsuariosPage = () => {
             <div className="space-y-1 relative z-10">
               <h3 className="font-bold text-lg leading-tight">{u.username}</h3>
               {u.role !== 'ADMIN' && (
-                <div className="flex items-start gap-1.5 text-xs text-muted-foreground mt-2">
-                  <BookOpen size={14} className="mt-0.5 shrink-0 text-primary/70" />
-                  <span>{CURSOS_NOMES[u.curso_id] || `Curso ID: ${u.curso_id}`}</span>
+                <div className="mt-3 space-y-1.5">
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-primary/80 uppercase tracking-wider">
+                    <BookOpen size={12} className="shrink-0" />
+                    <span>Cursos que gere</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground leading-relaxed pl-0.5">
+                    {CURSOS_GERIDOS_LABEL[u.curso_id] || CURSOS_NOMES[u.curso_id] || `Curso ID: ${u.curso_id}`}
+                  </p>
                 </div>
               )}
             </div>
@@ -246,30 +266,56 @@ const UsuariosPage = () => {
 
               <div className="space-y-2">
                 <label className="text-sm font-medium">Nível de Acesso (Função)</label>
-                <select 
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 font-medium"
-                >
-                  <option value="DIRETOR_CURSO">Director de Curso</option>
-                  <option value="ADMIN">Administrador Geral</option>
-                </select>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all text-center ${
+                    formData.role === 'USER' ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/30 bg-background'
+                  }`}>
+                    <input type="radio" name="role" value="USER" checked={formData.role === 'USER'}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      className="hidden"
+                    />
+                    <User size={22} className={formData.role === 'USER' ? 'text-primary' : 'text-muted-foreground'} />
+                    <span className={`text-xs font-bold ${formData.role === 'USER' ? 'text-primary' : 'text-muted-foreground'}`}>Director de Curso</span>
+                  </label>
+                  <label className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all text-center ${
+                    formData.role === 'ADMIN' ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/30 bg-background'
+                  }`}>
+                    <input type="radio" name="role" value="ADMIN" checked={formData.role === 'ADMIN'}
+                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                      className="hidden"
+                    />
+                    <Shield size={22} className={formData.role === 'ADMIN' ? 'text-primary' : 'text-muted-foreground'} />
+                    <span className={`text-xs font-bold ${formData.role === 'ADMIN' ? 'text-primary' : 'text-muted-foreground'}`}>Administrador Geral</span>
+                  </label>
+                </div>
               </div>
 
-              {formData.role === 'DIRETOR_CURSO' && (
-                <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
-                  <label className="text-sm font-medium">Curso Vinculado</label>
-                  <select 
-                    value={formData.curso_id}
-                    onChange={(e) => setFormData({ ...formData, curso_id: parseInt(e.target.value) })}
-                    className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 font-medium"
-                  >
-                    <option value={2}>Contabilidade e Auditoria</option>
-                    <option value={3}>Contabilidade e Administração Pública</option>
-                    <option value={4}>Engenharia de Minas</option>
-                    <option value={5}>Engenharia de Processamento Mineral</option>
-                    <option value={6}>Engenharia Informática</option>
-                  </select>
+              {formData.role === 'USER' && (
+                <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <BookOpen size={14} className="text-primary" />
+                    Área / Curso que vai gerir
+                  </label>
+                  <div className="grid grid-cols-1 gap-2">
+                    {CURSOS_OPCOES.map(opt => (
+                      <label key={opt.value} className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                        formData.curso_id === opt.value ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/30 bg-background'
+                      }`}>
+                        <input
+                          type="radio"
+                          name="curso_id"
+                          value={opt.value}
+                          checked={formData.curso_id === opt.value}
+                          onChange={() => setFormData({ ...formData, curso_id: opt.value })}
+                          className="mt-0.5 accent-primary"
+                        />
+                        <div>
+                          <p className={`text-xs font-bold ${formData.curso_id === opt.value ? 'text-primary' : 'text-foreground'}`}>{opt.label}</p>
+                          <p className="text-[10px] text-muted-foreground mt-0.5">{opt.detail}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               )}
 
