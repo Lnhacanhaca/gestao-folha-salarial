@@ -10,7 +10,7 @@ const UsuariosPage = () => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    role: 'USER',
+    role: 'DIRETOR_CURSO',
     curso_id: 2
   });
 
@@ -75,7 +75,7 @@ const UsuariosPage = () => {
       setFormData({
         username: '',
         password: '',
-        role: 'USER',
+        role: 'DIRETOR_CURSO',
         curso_id: 2
       });
     }
@@ -104,6 +104,12 @@ const UsuariosPage = () => {
       role: formData.role,
       curso_id: formData.role === 'ADMIN' ? null : parseInt(formData.curso_id)
     };
+    
+    // Validate role is a valid enum value
+    if (!['ADMIN', 'DIRETOR_CURSO'].includes(payload.role)) {
+      alert('Função inválida. Por favor selecione uma opção válida.');
+      return;
+    }
 
     if (formData.password) {
       payload.password = formData.password;
@@ -268,14 +274,14 @@ const UsuariosPage = () => {
                 <label className="text-sm font-medium">Nível de Acesso (Função)</label>
                 <div className="grid grid-cols-2 gap-2">
                   <label className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all text-center ${
-                    formData.role === 'USER' ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/30 bg-background'
+                    formData.role === 'DIRETOR_CURSO' ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/30 bg-background'
                   }`}>
-                    <input type="radio" name="role" value="USER" checked={formData.role === 'USER'}
+                    <input type="radio" name="role" value="DIRETOR_CURSO" checked={formData.role === 'DIRETOR_CURSO'}
                       onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                       className="hidden"
                     />
-                    <User size={22} className={formData.role === 'USER' ? 'text-primary' : 'text-muted-foreground'} />
-                    <span className={`text-xs font-bold ${formData.role === 'USER' ? 'text-primary' : 'text-muted-foreground'}`}>Director de Curso</span>
+                    <User size={22} className={formData.role === 'DIRETOR_CURSO' ? 'text-primary' : 'text-muted-foreground'} />
+                    <span className={`text-xs font-bold ${formData.role === 'DIRETOR_CURSO' ? 'text-primary' : 'text-muted-foreground'}`}>Director de Curso</span>
                   </label>
                   <label className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 cursor-pointer transition-all text-center ${
                     formData.role === 'ADMIN' ? 'border-primary bg-primary/5' : 'border-muted hover:border-primary/30 bg-background'
@@ -290,7 +296,7 @@ const UsuariosPage = () => {
                 </div>
               </div>
 
-              {formData.role === 'USER' && (
+              {formData.role === 'DIRETOR_CURSO' && (
                 <div className="space-y-3 animate-in slide-in-from-top-2 duration-200">
                   <label className="text-sm font-medium flex items-center gap-2">
                     <BookOpen size={14} className="text-primary" />
