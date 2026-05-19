@@ -159,18 +159,18 @@ const DocentesPage = () => {
       let parsed = cursosData;
       if (typeof cursosData === 'string') {
         if (cursosData.includes(',') && !cursosData.includes('[')) {
-          return cursosData.split(',').map(n => ({ id: parseInt(n.trim()), ap: 0 })).filter(c => !isNaN(c.id));
+          return cursosData.split(',').map(n => ({ id: parseInt(n.trim()), ap: 0, semestre: 1 })).filter(c => !isNaN(c.id));
         }
         parsed = JSON.parse(cursosData);
       }
       if (Array.isArray(parsed)) {
         return parsed.map(c => {
-          if (typeof c === 'number') return { id: c, ap: 0 };
-          if (typeof c === 'object' && c.id) return { id: parseInt(c.id), ap: parseFloat(c.ap) || 0 };
+          if (typeof c === 'number') return { id: c, ap: 0, semestre: 1 };
+          if (typeof c === 'object' && c.id) return { id: parseInt(c.id), ap: parseFloat(c.ap) || 0, semestre: parseInt(c.semestre) || 1 };
           return null;
         }).filter(Boolean);
       }
-      if (typeof parsed === 'number') return [{ id: parsed, ap: 0 }];
+      if (typeof parsed === 'number') return [{ id: parsed, ap: 0, semestre: 1 }];
       return [];
     } catch {
       return [];
@@ -187,7 +187,7 @@ const DocentesPage = () => {
       });
     } else {
       setEditingDocente(null);
-      setFormData({ nome: '', categoria: '', cursos: [{ id: 2, ap: 0 }, { id: 3, ap: 0 }, { id: 4, ap: 0 }, { id: 5, ap: 0 }, { id: 6, ap: 0 }] });
+      setFormData({ nome: '', categoria: '', cursos: [{ id: 2, ap: 0, semestre: 1 }, { id: 3, ap: 0, semestre: 1 }, { id: 4, ap: 0, semestre: 1 }, { id: 5, ap: 0, semestre: 1 }, { id: 6, ap: 0, semestre: 1 }] });
     }
     setIsModalOpen(true);
   };
@@ -223,7 +223,7 @@ const DocentesPage = () => {
       if (exists) {
         return { ...prev, cursos: prev.cursos.filter(c => c.id !== cursoId) };
       } else {
-        return { ...prev, cursos: [...prev.cursos, { id: cursoId, ap: 0 }] };
+        return { ...prev, cursos: [...prev.cursos, { id: cursoId, ap: 0, semestre: 1 }] };
       }
     });
   };
@@ -232,6 +232,13 @@ const DocentesPage = () => {
     setFormData(prev => ({
       ...prev,
       cursos: prev.cursos.map(c => c.id === cursoId ? { ...c, ap: parseFloat(apValue) || 0 } : c)
+    }));
+  };
+
+  const handleSemestreChange = (cursoId, semestreValue) => {
+    setFormData(prev => ({
+      ...prev,
+      cursos: prev.cursos.map(c => c.id === cursoId ? { ...c, semestre: parseInt(semestreValue) || 1 } : c)
     }));
   };
 
@@ -318,8 +325,8 @@ const DocentesPage = () => {
                         {cursosArray.map(cData => {
                           const c = CURSOS_OPCOES.find(opt => opt.id === cData.id);
                           return c ? (
-                            <span key={cData.id} className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-md" title={`Horas Programadas (AP): ${cData.ap || 0}`}>
-                              {c.nome} {cData.ap > 0 && `(${cData.ap}h)`}
+                            <span key={cData.id} className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-md" title={`Horas Programadas (AP): ${cData.ap || 0} - Semestre: ${cData.semestre || 1}`}>
+                              {c.nome} {cData.ap > 0 && `(${cData.ap}h)`} <span className="text-muted-foreground font-normal">({cData.semestre || 1}º Sem)</span>
                             </span>
                           ) : null;
                         })}
@@ -398,17 +405,44 @@ const DocentesPage = () => {
                           <span className="text-sm font-medium">{curso.nome}</span>
                         </label>
                         {isChecked && (
-                          <div className="flex items-center gap-2 ml-6 sm:ml-0 animate-in fade-in slide-in-from-right-4 duration-200">
-                            <span className="text-xs text-muted-foreground font-semibold">AP:</span>
-                            <input 
-                              type="number" 
-                              value={isChecked.ap || ''}
-                              onChange={(e) => handleApChange(curso.id, e.target.value)}
-                              placeholder="0"
-                              min="0"
-                              className="w-16 bg-background border rounded-md p-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/50 text-center font-bold"
-                            />
-                            <span className="text-xs text-muted-foreground">h/semana</span>
+                          <div className="flex flex-wrap items-center gap-3 ml-6 sm:ml-0 animate-in fade-in slide-in-from-right-4 duration-200">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-muted-foreground font-semibold">AP:</span>
+                              <input 
+                                type="number" 
+                                value={isChecked.ap || ''}
+                                onChange={(e) => handleApChange(curso.id, e.target.value)}
+                                placeholder="0"
+                                min="0"
+                                className="w-14 bg-background border rounded-md p-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/50 text-center font-bold"
+                              />
+                              <span className="text-xs text-muted-foreground">h/semana</span>
+                            </div>
+
+                            <div className="flex bg-secondary p-0.5 rounded-lg border text-xs">
+                              <button
+                                type="button"
+                                onClick={() => handleSemestreChange(curso.id, 1)}
+                                className={`px-2 py-1 rounded-md font-bold transition-all ${
+                                  (isChecked.semestre || 1) === 1 
+                                    ? 'bg-primary text-white shadow-sm' 
+                                    : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                1º Sem
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleSemestreChange(curso.id, 2)}
+                                className={`px-2 py-1 rounded-md font-bold transition-all ${
+                                  isChecked.semestre === 2 
+                                    ? 'bg-primary text-white shadow-sm' 
+                                    : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                              >
+                                2º Sem
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
