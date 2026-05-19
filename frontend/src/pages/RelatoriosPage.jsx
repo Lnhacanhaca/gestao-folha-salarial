@@ -410,12 +410,21 @@ const RelatoriosPage = () => {
                     <td className="p-1.5 border-2 border-black">
                       {formatarValor(dados.reduce((acc, r) => acc + (r.total_ap || 0), 0) * 500)}
                     </td>
-                    <td className="p-1.5 border-2 border-black">
+                    <td className="p-1.5 border-2 border-black bg-yellow-100 text-[11px] font-black text-black">
                       {formatarValor(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500)}
                     </td>
                   </tr>
                 </tbody>
               </table>
+            </div>
+
+            <div className="mt-4 flex justify-end">
+              <div className="border-2 border-black p-2 bg-gray-50 text-right min-w-[280px]">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-black block">Valor Total a ser Remunerado:</span>
+                <span className="text-sm font-black text-black block mt-0.5">
+                  {formatarValor(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500)}
+                </span>
+              </div>
             </div>
           )}
 
