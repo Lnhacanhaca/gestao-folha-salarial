@@ -7,6 +7,9 @@ import Papa from 'papaparse';
 
 const DocentesPage = () => {
   const [search, setSearch] = useState('');
+  const [filterCurso, setFilterCurso] = useState('all');
+  const [filterSemestre, setFilterSemestre] = useState('all');
+  const [filterHoras, setFilterHoras] = useState('all');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingDocente, setEditingDocente] = useState(null);
   const [formData, setFormData] = useState({ nome: '', categoria: '', cursos: [1] });
@@ -179,11 +182,60 @@ const DocentesPage = () => {
     ), { duration: Infinity, style: { minWidth: '350px' } });
   };
 
-  const filteredDocentes = docentes?.filter(d => 
-    d.nome?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredDocentes = docentes?.filter(d => {
+    // 1. Filter by search name
+    if (search && !d.nome?.toLowerCase().includes(search.toLowerCase())) {
+      return false;
+    }
 
-  const parseCursos = (cursosData) => {
+    const cursosArray = parseCursos(d.cursos);
+
+    // 2. Filter by course
+    if (filterCurso !== 'all') {
+      const targetId = parseInt(filterCurso);
+      const hasCourse = cursosArray.some(c => c.id === targetId);
+      if (!hasCourse) return false;
+    }
+
+    // 3. Filter by semester
+    if (filterSemestre !== 'all') {
+      const targetSem = parseInt(filterSemestre);
+      const hasSem = cursosArray.some(c => {
+        const matchesSem = c.semestre === targetSem;
+        if (filterCurso !== 'all') {
+          return matchesSem && c.id === parseInt(filterCurso);
+        }
+        return matchesSem;
+      });
+      if (!hasSem) return false;
+    }
+
+    // 4. Filter by hours range
+    if (filterHoras !== 'all') {
+      const matchingCursos = cursosArray.filter(c => {
+        let ok = true;
+        if (filterCurso !== 'all') ok = ok && c.id === parseInt(filterCurso);
+        if (filterSemestre !== 'all') ok = ok && c.semestre === parseInt(filterSemestre);
+        return ok;
+      });
+
+      const totalAp = matchingCursos.reduce((acc, c) => acc + (c.ap || 0), 0);
+
+      if (filterHoras === 'zero') {
+        if (totalAp !== 0) return false;
+      } else if (filterHoras === 'low') {
+        if (totalAp <= 0 || totalAp > 10) return false;
+      } else if (filterHoras === 'medium') {
+        if (totalAp < 11 || totalAp > 20) return false;
+      } else if (filterHoras === 'high') {
+        if (totalAp <= 20) return false;
+      }
+    }
+
+    return true;
+  });
+
+  function parseCursos(cursosData) {
     try {
       if (!cursosData) return [];
       let parsed = cursosData;
@@ -350,16 +402,86 @@ const DocentesPage = () => {
       </div>
 
       <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
-        <div className="p-4 border-b flex items-center gap-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-2.5 text-muted-foreground" size={18} />
-            <input 
-              type="text" 
-              placeholder="Pesquisar docente..." 
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-secondary/50 border-none rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20"
-            />
+        <div className="p-5 border-b bg-muted/20 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Filtros Avançados</span>
+              {filteredDocentes && (
+                <span className="bg-primary/10 text-primary text-[11px] font-black px-2 py-0.5 rounded-full">
+                  {filteredDocentes.length} {filteredDocentes.length === 1 ? 'docente' : 'docentes'} encontrado(s)
+                </span>
+              )}
+            </div>
+            
+            {(search || filterCurso !== 'all' || filterSemestre !== 'all' || filterHoras !== 'all') && (
+              <button
+                onClick={() => {
+                  setSearch('');
+                  setFilterCurso('all');
+                  setFilterSemestre('all');
+                  setFilterHoras('all');
+                }}
+                className="text-xs text-destructive hover:underline font-bold flex items-center gap-1"
+              >
+                Limpar Filtros
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 text-muted-foreground" size={18} />
+              <input 
+                type="text" 
+                placeholder="Pesquisar docente por nome..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full bg-secondary/50 border rounded-xl py-2 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-medium"
+              />
+            </div>
+
+            {/* Curso */}
+            <div>
+              <select
+                value={filterCurso}
+                onChange={(e) => setFilterCurso(e.target.value)}
+                className="w-full bg-secondary/50 border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-medium cursor-pointer"
+              >
+                <option value="all">Todos os Cursos</option>
+                {CURSOS_OPCOES.filter(c => c.id !== 1).map(c => (
+                  <option key={c.id} value={c.id}>{c.nome}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Semestre */}
+            <div>
+              <select
+                value={filterSemestre}
+                onChange={(e) => setFilterSemestre(e.target.value)}
+                className="w-full bg-secondary/50 border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-medium cursor-pointer"
+              >
+                <option value="all">Todos os Semestres</option>
+                <option value="1">1º Semestre</option>
+                <option value="2">2º Semestre</option>
+              </select>
+            </div>
+
+            {/* Carga Horária */}
+            <div>
+              <select
+                value={filterHoras}
+                onChange={(e) => setFilterHoras(e.target.value)}
+                className="w-full bg-secondary/50 border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-medium cursor-pointer"
+              >
+                <option value="all">Carga Horária (Qualquer)</option>
+                <option value="zero">Sem Carga (0h)</option>
+                <option value="low">Carga Baixa (1h - 10h)</option>
+                <option value="medium">Carga Média (11h - 20h)</option>
+                <option value="high">Carga Alta (&gt; 20h)</option>
+              </select>
+            </div>
           </div>
         </div>
 

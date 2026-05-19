@@ -8,6 +8,24 @@ const importar = async (req, res, next) => {
     return res.status(400).json({ error: 'Não é permitido fazer lançamentos directos na vista Geral Consolidada.' });
   }
 
+  // Validate inputs
+  if (dados && Array.isArray(dados)) {
+    for (const item of dados) {
+      if (item.semanas && Array.isArray(item.semanas)) {
+        for (const s of item.semanas) {
+          const apVal = parseFloat(s.ap) || 0;
+          const adVal = parseFloat(s.ad) || 0;
+          if (apVal < 0 || adVal < 0) {
+            return res.status(400).json({ error: 'As horas não podem ser valores negativos.' });
+          }
+          if (adVal > apVal) {
+            return res.status(400).json({ error: 'As Aulas Dadas (AD) não podem ser maiores que as Aulas Programadas (AP).' });
+          }
+        }
+      }
+    }
+  }
+
   const trx = await db.transaction();
   try {
 
@@ -103,6 +121,8 @@ const getByCurso = async (req, res, next) => {
       }
     }
 
+    const activeSemestre = (Number(mes) >= 7 && Number(mes) <= 12) ? 2 : 1;
+
     // 1. Fetch all docentes who are registered for these courses in their profile
     const docentes = await db('docentes').select('*').orderBy('nome', 'asc');
     const courseDocentes = docentes.filter(doc => {
@@ -135,52 +155,96 @@ const getByCurso = async (req, res, next) => {
     const detalhes = folha_ids.length > 0 ? await db('folha_detalhes').whereIn('folha_id', folha_ids) : [];
 
     const data = courseDocentes.map(doc => {
-      // Parse doc.cursos to find the weekly AP for target courses
-      let apValue = 0;
+      let activeCursoIds = [];
+      let cursosArray = [];
       try {
-        let cursosArray = [];
         if (typeof doc.cursos === 'string') {
           const parsed = JSON.parse(doc.cursos);
           cursosArray = Array.isArray(parsed) ? parsed : [parsed];
         } else if (Array.isArray(doc.cursos)) {
           cursosArray = doc.cursos;
         }
+
         cursosArray.forEach(c => {
-          const cid = Number(c.id || c);
-          if (targetCursoIds.includes(cid)) {
-            apValue += parseFloat(c.ap) || 0;
+          const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+          if (curSem === null || curSem === activeSemestre) {
+            activeCursoIds.push(Number(c.id || c));
           }
         });
       } catch (e) {}
 
-      // Find saved sheets for this teacher
+      // Find saved sheets for this teacher and only allow courses they teach in active semester
       const teacherFolhas = savedFolhas.filter(f => f.docente_id === doc.id);
+      const validTeacherFolhas = teacherFolhas.filter(f => activeCursoIds.includes(f.curso_id));
 
       // Weeks initialization
       const semanas = [
-        { semana: 1, ap: apValue, ad: 0 },
-        { semana: 2, ap: apValue, ad: 0 },
-        { semana: 3, ap: apValue, ad: 0 },
-        { semana: 4, ap: apValue, ad: 0 },
-        { semana: 5, ap: apValue, ad: 0 }
+        { semana: 1, ap: 0, ad: 0 },
+        { semana: 2, ap: 0, ad: 0 },
+        { semana: 3, ap: 0, ad: 0 },
+        { semana: 4, ap: 0, ad: 0 },
+        { semana: 5, ap: 0, ad: 0 }
       ];
 
       let retificada = 0;
       let observacoes = [];
 
-      teacherFolhas.forEach(f => {
-        retificada = retificada || f.retificada || 0;
-        if (f.observacoes) {
-          observacoes.push(f.observacoes);
-        }
+      // Loop through target course IDs that the teacher teaches in the active semester
+      const queryActiveCursos = targetCursoIds.filter(cid => activeCursoIds.includes(cid));
 
-        const f_detalhes = detalhes.filter(d => d.folha_id === f.id);
-        f_detalhes.forEach(d => {
-          const idx = d.semana - 1;
-          if (idx >= 0 && idx < 5) {
-            semanas[idx].ad += parseFloat(d.ad) || 0;
+      queryActiveCursos.forEach(cid => {
+        const f = validTeacherFolhas.find(fol => fol.curso_id === cid);
+        if (f) {
+          retificada = retificada || f.retificada || 0;
+          if (f.observacoes) observacoes.push(f.observacoes);
+
+          const f_detalhes = detalhes.filter(d => d.folha_id === f.id);
+          if (f_detalhes.length > 0) {
+            f_detalhes.forEach(d => {
+              const idx = d.semana - 1;
+              if (idx >= 0 && idx < 5) {
+                semanas[idx].ap += parseFloat(d.ap) || 0;
+                semanas[idx].ad += parseFloat(d.ad) || 0;
+              }
+            });
+          } else {
+            // Sheet has no details, fall back to profile default AP
+            let match = cursosArray.find(c => {
+              const curId = Number(c.id || c);
+              const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+              return curId === cid && curSem === activeSemestre;
+            });
+            if (!match) {
+              match = cursosArray.find(c => {
+                const curId = Number(c.id || c);
+                const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+                return curId === cid && curSem === null;
+              });
+            }
+            const defaultAp = match ? (parseFloat(match.ap) || 0) : 0;
+            for (let i = 0; i < 5; i++) {
+              semanas[i].ap += defaultAp;
+            }
           }
-        });
+        } else {
+          // No saved sheet, use profile default AP
+          let match = cursosArray.find(c => {
+            const curId = Number(c.id || c);
+            const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+            return curId === cid && curSem === activeSemestre;
+          });
+          if (!match) {
+            match = cursosArray.find(c => {
+              const curId = Number(c.id || c);
+              const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+              return curId === cid && curSem === null;
+            });
+          }
+          const defaultAp = match ? (parseFloat(match.ap) || 0) : 0;
+          for (let i = 0; i < 5; i++) {
+            semanas[i].ap += defaultAp;
+          }
+        }
       });
 
       // Recalculate totals
@@ -220,11 +284,12 @@ const getGeral = async (req, res, next) => {
     const folha_ids = savedFolhas.map(f => f.id);
     const detalhes = folha_ids.length > 0 ? await db('folha_detalhes').whereIn('folha_id', folha_ids) : [];
 
+    const activeSemestre = (Number(mes) >= 7 && Number(mes) <= 12) ? 2 : 1;
+
     const data = docentes.map(doc => {
-      // Parse doc.cursos to find all courses and sum their AP
-      let total_weekly_ap = 0;
+      let activeCursoIds = [];
+      let cursosArray = [];
       try {
-        let cursosArray = [];
         if (typeof doc.cursos === 'string') {
           const parsed = JSON.parse(doc.cursos);
           cursosArray = Array.isArray(parsed) ? parsed : [parsed];
@@ -233,17 +298,18 @@ const getGeral = async (req, res, next) => {
         } else if (typeof doc.cursos === 'number') {
           cursosArray = [{ id: doc.cursos, ap: 0 }];
         }
+
         cursosArray.forEach(c => {
-          if (c && c.ap !== undefined) {
-            total_weekly_ap += parseFloat(c.ap) || 0;
-          } else if (typeof c === 'object' && c.ap) {
-            total_weekly_ap += parseFloat(c.ap) || 0;
+          const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+          if (curSem === null || curSem === activeSemestre) {
+            activeCursoIds.push(Number(c.id || c));
           }
         });
       } catch (e) {}
 
-      // Find all saved sheets for this teacher in this month/year
+      // Find all saved sheets for this teacher in this month/year and only allow courses they teach in active semester
       const teacherFolhas = savedFolhas.filter(f => f.docente_id === doc.id);
+      const validTeacherFolhas = teacherFolhas.filter(f => activeCursoIds.includes(f.curso_id));
       
       let total_ad = 0;
       let retificada = 0;
@@ -251,25 +317,67 @@ const getGeral = async (req, res, next) => {
 
       // Weeks initialization
       const semanas = [
-        { semana: 1, ap: total_weekly_ap, ad: 0 },
-        { semana: 2, ap: total_weekly_ap, ad: 0 },
-        { semana: 3, ap: total_weekly_ap, ad: 0 },
-        { semana: 4, ap: total_weekly_ap, ad: 0 },
-        { semana: 5, ap: total_weekly_ap, ad: 0 }
+        { semana: 1, ap: 0, ad: 0 },
+        { semana: 2, ap: 0, ad: 0 },
+        { semana: 3, ap: 0, ad: 0 },
+        { semana: 4, ap: 0, ad: 0 },
+        { semana: 5, ap: 0, ad: 0 }
       ];
 
-      // Sum saved AD weekly values from database details
-      teacherFolhas.forEach(f => {
-        retificada = retificada || f.retificada || 0;
-        if (f.observacoes) observacoes.push(f.observacoes);
+      // Loop through all course IDs that the teacher teaches in the active semester
+      activeCursoIds.forEach(cid => {
+        const f = validTeacherFolhas.find(fol => fol.curso_id === cid);
+        if (f) {
+          retificada = retificada || f.retificada || 0;
+          if (f.observacoes) observacoes.push(f.observacoes);
 
-        const f_detalhes = detalhes.filter(d => d.folha_id === f.id);
-        f_detalhes.forEach(d => {
-          const idx = d.semana - 1;
-          if (idx >= 0 && idx < 5) {
-            semanas[idx].ad += Number(d.ad) || 0;
+          const f_detalhes = detalhes.filter(d => d.folha_id === f.id);
+          if (f_detalhes.length > 0) {
+            f_detalhes.forEach(d => {
+              const idx = d.semana - 1;
+              if (idx >= 0 && idx < 5) {
+                semanas[idx].ap += parseFloat(d.ap) || 0;
+                semanas[idx].ad += parseFloat(d.ad) || 0;
+              }
+            });
+          } else {
+            // Sheet has no details, fall back to profile default AP
+            let match = cursosArray.find(c => {
+              const curId = Number(c.id || c);
+              const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+              return curId === cid && curSem === activeSemestre;
+            });
+            if (!match) {
+              match = cursosArray.find(c => {
+                const curId = Number(c.id || c);
+                const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+                return curId === cid && curSem === null;
+              });
+            }
+            const defaultAp = match ? (parseFloat(match.ap) || 0) : 0;
+            for (let i = 0; i < 5; i++) {
+              semanas[i].ap += defaultAp;
+            }
           }
-        });
+        } else {
+          // No saved sheet, use profile default AP
+          let match = cursosArray.find(c => {
+            const curId = Number(c.id || c);
+            const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+            return curId === cid && curSem === activeSemestre;
+          });
+          if (!match) {
+            match = cursosArray.find(c => {
+              const curId = Number(c.id || c);
+              const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+              return curId === cid && curSem === null;
+            });
+          }
+          const defaultAp = match ? (parseFloat(match.ap) || 0) : 0;
+          for (let i = 0; i < 5; i++) {
+            semanas[i].ap += defaultAp;
+          }
+        }
       });
 
       // Recalculate totals

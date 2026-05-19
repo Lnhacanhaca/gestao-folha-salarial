@@ -179,6 +179,12 @@ const LancarNotasPage = () => {
 
   const updateCell = (docIndex, weekIndex, field, value) => {
     const val = parseFloat(value) || 0;
+    
+    if (val < 0) {
+      toast.error('Erro: As horas não podem ser valores negativos');
+      return;
+    }
+
     const newDados = [...dados];
     
     if (field === 'ad' && val > newDados[docIndex].semanas[weekIndex].ap) {
@@ -187,9 +193,16 @@ const LancarNotasPage = () => {
     }
 
     newDados[docIndex].semanas[weekIndex][field] = val;
+
+    // Recalculate row totals
+    const row = newDados[docIndex];
+    row.total_ap = row.semanas.reduce((acc, s) => acc + (parseFloat(s.ap) || 0), 0);
+    row.total_ad = row.semanas.reduce((acc, s) => acc + (parseFloat(s.ad) || 0), 0);
+    row.valor_receber = row.total_ad * 500;
+
     if (canEditPreviousMonth) {
-      newDados[docIndex].retificada = true;
-      newDados[docIndex].observacoes = "Alterado na retificação (Auditória)";
+      row.retificada = true;
+      row.observacoes = "Alterado na retificação (Auditória)";
     }
     setDados(newDados);
   };
@@ -293,11 +306,19 @@ const LancarNotasPage = () => {
             // Semester 2: July to December (months 7-12)
             const activeSemestre = (fMes >= 7 && fMes <= 12) ? 2 : 1;
             
-            const cursoObj = cursosArray.find(c => {
+            let cursoObj = cursosArray.find(c => {
               const cid = c.id !== undefined ? parseInt(c.id) : parseInt(c);
-              const csem = c.semestre !== undefined ? parseInt(c.semestre) : 1;
+              const csem = c.semestre !== undefined ? parseInt(c.semestre) : null;
               return cid === fCursoId && csem === activeSemestre;
             });
+            // Fallback: if no semester-specific match is found, check if a general course config (no semester specified) exists
+            if (!cursoObj) {
+              cursoObj = cursosArray.find(c => {
+                const cid = c.id !== undefined ? parseInt(c.id) : parseInt(c);
+                const csem = c.semestre !== undefined ? parseInt(c.semestre) : null;
+                return cid === fCursoId && csem === null;
+              });
+            }
 
             if (cursoObj && cursoObj.ap !== undefined) {
               apValue = parseFloat(cursoObj.ap) || 0;
@@ -307,6 +328,9 @@ const LancarNotasPage = () => {
           return {
             docente_nome: doc.nome,
             semanas: Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: apValue, ad: 0 })),
+            total_ap: apValue * 5,
+            total_ad: 0,
+            valor_receber: 0,
             retificada: 0,
             observacoes: null
           };
@@ -341,8 +365,8 @@ const LancarNotasPage = () => {
                 const savedSemana = saved.semanas?.[sIdx];
                 return {
                   semana: sIdx + 1,
-                  // ALWAYS override with the teacher profile's current AP!
-                  ap: defSemana.ap,
+                  // Load the saved AP if it exists, otherwise use profile's AP
+                  ap: savedSemana && savedSemana.ap !== undefined ? parseFloat(savedSemana.ap) : defSemana.ap,
                   ad: savedSemana ? (parseFloat(savedSemana.ad) || 0) : 0
                 };
               });
