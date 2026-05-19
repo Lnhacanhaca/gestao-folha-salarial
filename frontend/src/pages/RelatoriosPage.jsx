@@ -137,11 +137,15 @@ const RelatoriosPage = () => {
             section,
             table,
             tr,
-            th,
             td {
               background-color: white !important;
               background: white !important;
               box-shadow: none !important;
+            }
+            /* Keep only the table header cell backgrounds as light gray */
+            thead th {
+              background-color: #f3f4f6 !important;
+              background: #f3f4f6 !important;
             }
             body {
               margin: 0 !important;
