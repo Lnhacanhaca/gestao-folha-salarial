@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit2, Trash2, UserPlus, Loader2, Upload } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, UserPlus, Loader2, Upload, Download } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import Papa from 'papaparse';
@@ -256,6 +256,38 @@ const DocentesPage = () => {
     ), { duration: Infinity, style: { minWidth: '300px' } });
   };
 
+  const handleCSVExport = () => {
+    if (!docentes || docentes.length === 0) {
+      toast.error('Não existem docentes para exportar.');
+      return;
+    }
+
+    const dataToExport = docentes.map(doc => {
+      const parsedCursos = parseCursos(doc.cursos);
+      const cursosFormatted = parsedCursos.map(c => {
+        const cNome = CURSOS_OPCOES.find(o => o.id === c.id)?.nome || `Curso ID ${c.id}`;
+        return `${cNome} (${c.ap}h - Semestre ${c.semestre})`;
+      }).join('; ');
+
+      return {
+        'Nome do Docente': doc.nome,
+        'Categoria': doc.categoria || '',
+        'Cursos e Cargas Horárias': cursosFormatted
+      };
+    });
+
+    const csv = Papa.unparse(dataToExport, { delimiter: ';' });
+    const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `docentes_curso_nocturno_${new Date().getFullYear()}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Docentes exportados com sucesso!');
+  };
+
   const handleCursoToggle = (cursoId, semestre) => {
     setFormData(prev => {
       const exists = prev.cursos.find(c => c.id === cursoId && c.semestre === semestre);
@@ -288,6 +320,14 @@ const DocentesPage = () => {
             Importar CSV
             <input type="file" accept=".csv" onChange={handleCSVImport} className="hidden" disabled={importing} />
           </label>
+
+          <button 
+            onClick={handleCSVExport}
+            className="bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-sm"
+          >
+            <Download size={20} />
+            Exportar CSV
+          </button>
 
           <button 
             onClick={() => openModal()}
