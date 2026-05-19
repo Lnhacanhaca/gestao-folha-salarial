@@ -52,6 +52,7 @@ const MainLayout = () => {
 
   if (user?.role === 'ADMIN') {
     menuItems.push({ to: "/usuarios", icon: UserCog, label: "Utilizadores" });
+    menuItems.push({ to: "/auditoria", icon: ShieldAlert, label: "Auditoria" });
   }
 
   const handleLogout = () => {
@@ -66,6 +67,7 @@ const MainLayout = () => {
       case '/lancar-notas': return 'Lançamento de Horas';
       case '/relatorios': return 'Relatórios';
       case '/usuarios': return 'Utilizadores';
+      case '/auditoria': return 'Histórico e Auditoria';
       default: return 'Página';
     }
   };

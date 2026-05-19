@@ -1,4 +1,5 @@
 const db = require('../../config/database');
+const { logAction } = require('../../shared/utils/auditLogger');
 
 const importar = async (req, res, next) => {
   const trx = await db.transaction();
@@ -11,7 +12,9 @@ const importar = async (req, res, next) => {
         .whereRaw('LOWER(nome) = ?', [trimmedNome.toLowerCase()])
         .first();
       if (!docente) {
-        [docente] = await trx('docentes').insert({ nome: trimmedNome }).returning('*');
+        // Fetch generated ID safely
+        const [insertedId] = await trx('docentes').insert({ nome: trimmedNome });
+        docente = await trx('docentes').where({ id: insertedId }).first();
       }
 
       // Calculate Totals
@@ -36,7 +39,7 @@ const importar = async (req, res, next) => {
         // Clear details to re-insert
         await trx('folha_detalhes').where({ folha_id: folha.id }).del();
       } else {
-        [folha] = await trx('folhas').insert({
+        const [insertedFolhaId] = await trx('folhas').insert({
           docente_id: docente.id,
           curso_id,
           mes,
@@ -46,7 +49,8 @@ const importar = async (req, res, next) => {
           valor_receber,
           retificada: item.retificada ? 1 : 0,
           observacoes: item.observacoes || null
-        }).returning('*');
+        });
+        folha = await trx('folhas').where({ id: insertedFolhaId }).first();
       }
 
       // Insert Details
@@ -59,6 +63,15 @@ const importar = async (req, res, next) => {
 
       await trx('folha_detalhes').insert(detalhes);
     }
+
+    await logAction({
+      userId: req.user.id,
+      username: req.user.username,
+      action: 'SAVE_FOLHA',
+      targetType: 'folhas',
+      targetId: curso_id,
+      details: `Lançadas/Atualizadas horas para o curso ID ${curso_id} do mês ${mes}/${ano}. Total de docentes: ${dados.length}.`
+    });
 
     await trx.commit();
     res.json({ message: 'Dados importados com sucesso' });

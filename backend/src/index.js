@@ -42,6 +42,10 @@ class App {
     // Folhas Module
     const folhaRoutes = require('./modules/folhas/folha.routes');
     this.app.use('/api/folhas', folhaRoutes);
+
+    // Audit Module
+    const auditRoutes = require('./modules/audit/audit.routes');
+    this.app.use('/api/audit', auditRoutes);
   }
 
   setupErrorHandling() {

@@ -1,4 +1,5 @@
 const db = require('../../config/database');
+const { logAction } = require('../../shared/utils/auditLogger');
 
 const getAll = async (req, res, next) => {
   try {
@@ -19,14 +20,36 @@ const create = async (req, res, next) => {
       .first();
 
     if (existing) {
-      const [updated] = await db('docentes')
+      await db('docentes')
         .where({ id: existing.id })
-        .update({ categoria, cursos: cursosStr })
-        .returning('*');
+        .update({ categoria, cursos: cursosStr });
+      
+      const updated = await db('docentes').where({ id: existing.id }).first();
+      
+      await logAction({
+        userId: req.user.id,
+        username: req.user.username,
+        action: 'UPDATE_DOCENTE_IMPORT',
+        targetType: 'docentes',
+        targetId: existing.id,
+        details: `Docente "${nome}" atualizado via importação de CSV.`
+      });
+
       return res.status(200).json(updated);
     }
 
-    const [docente] = await db('docentes').insert({ nome: nome.trim(), categoria, cursos: cursosStr }).returning('*');
+    const [insertedId] = await db('docentes').insert({ nome: nome.trim(), categoria, cursos: cursosStr });
+    const docente = await db('docentes').where({ id: insertedId || null }).orWhere({ nome: nome.trim() }).first();
+
+    await logAction({
+      userId: req.user.id,
+      username: req.user.username,
+      action: 'CREATE_DOCENTE',
+      targetType: 'docentes',
+      targetId: docente?.id,
+      details: `Cadastrado novo docente "${nome}" (Categoria: ${categoria}).`
+    });
+
     res.status(201).json(docente);
   } catch (error) {
     next(error);
@@ -41,7 +64,19 @@ const update = async (req, res, next) => {
     if (cursos) {
       updateData.cursos = Array.isArray(cursos) ? JSON.stringify(cursos) : cursos;
     }
+    
+    const oldDocente = await db('docentes').where({ id }).first();
     await db('docentes').where({ id }).update(updateData);
+
+    await logAction({
+      userId: req.user.id,
+      username: req.user.username,
+      action: 'UPDATE_DOCENTE',
+      targetType: 'docentes',
+      targetId: id,
+      details: `Atualizado docente "${oldDocente?.nome}" -> "${nome}" (Categoria: ${categoria}).`
+    });
+
     res.json({ message: 'Docente atualizado com sucesso' });
   } catch (error) {
     next(error);
@@ -51,7 +86,19 @@ const update = async (req, res, next) => {
 const remove = async (req, res, next) => {
   try {
     const { id } = req.params;
+    const oldDocente = await db('docentes').where({ id }).first();
+    
     await db('docentes').where({ id }).del();
+
+    await logAction({
+      userId: req.user.id,
+      username: req.user.username,
+      action: 'DELETE_DOCENTE',
+      targetType: 'docentes',
+      targetId: id,
+      details: `Removido docente "${oldDocente?.nome}" (ID: ${id}).`
+    });
+
     res.json({ message: 'Docente removido com sucesso' });
   } catch (error) {
     next(error);
@@ -61,6 +108,16 @@ const remove = async (req, res, next) => {
 const removeAll = async (req, res, next) => {
   try {
     await db('docentes').del();
+
+    await logAction({
+      userId: req.user.id,
+      username: req.user.username,
+      action: 'CLEAR_DOCENTES',
+      targetType: 'docentes',
+      targetId: null,
+      details: 'Eliminados TODOS os docentes do sistema.'
+    });
+
     res.json({ message: 'Todos os docentes foram removidos com sucesso' });
   } catch (error) {
     next(error);

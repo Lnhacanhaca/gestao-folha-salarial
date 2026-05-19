@@ -10,6 +10,7 @@ import DocentesPage from './pages/DocentesPage';
 import LancarNotasPage from './pages/LancarNotasPage';
 import RelatoriosPage from './pages/RelatoriosPage';
 import UsuariosPage from './pages/UsuariosPage';
+import AuditPage from './pages/AuditPage';
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,11 @@ function AppRoutes() {
         <Route path="usuarios" element={
           <ProtectedRoute roles={['ADMIN']}>
             <UsuariosPage />
+          </ProtectedRoute>
+        } />
+        <Route path="auditoria" element={
+          <ProtectedRoute roles={['ADMIN']}>
+            <AuditPage />
           </ProtectedRoute>
         } />
       </Route>
