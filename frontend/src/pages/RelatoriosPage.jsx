@@ -129,10 +129,23 @@ const RelatoriosPage = () => {
               size: ${viewMode === 'oficio' ? 'A4 portrait' : 'A4 landscape'};
               margin: 0;
             }
+            /* Force all background colors and graphics on layout containers to be white/transparent to avoid gray print background */
+            html,
+            body,
+            div,
+            main,
+            section,
+            table,
+            tr,
+            th,
+            td {
+              background-color: white !important;
+              background: white !important;
+              box-shadow: none !important;
+            }
             body {
               margin: 0 !important;
               padding: ${viewMode === 'oficio' ? '2.0cm 2.0cm 2.0cm 2.5cm' : '1.2cm 1.0cm'} !important;
-              background-color: white !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
