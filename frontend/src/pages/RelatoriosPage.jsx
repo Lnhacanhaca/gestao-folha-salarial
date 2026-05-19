@@ -106,11 +106,22 @@ const RelatoriosPage = () => {
       <style>
         {`
           @media screen {
+            /* Force the main layout background to be pure white and remove shadow/borders */
             body,
-            .min-h-screen,
-            main,
-            .bg-\\[\\#f8fafc\\] {
+            html,
+            div.min-h-screen,
+            div.flex.flex-1,
+            div.flex-1.flex.flex-col,
+            main {
               background-color: white !important;
+              background: white !important;
+            }
+            /* Remove borders/shadows from layout header, breadcrumb and sidebar */
+            header,
+            aside,
+            div.border-b {
+              box-shadow: none !important;
+              border-color: transparent !important;
             }
           }
           @media print {
