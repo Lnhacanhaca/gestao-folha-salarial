@@ -107,12 +107,12 @@ const RelatoriosPage = () => {
         {`
           @media print {
             @page {
-              size: ${viewMode === 'oficio' ? 'portrait' : 'landscape'};
-              margin: 1.2cm 1.0cm;
+              size: ${viewMode === 'oficio' ? 'A4 portrait' : 'A4 landscape'};
+              margin: 0;
             }
             body {
               margin: 0 !important;
-              padding: 0 !important;
+              padding: ${viewMode === 'oficio' ? '2.0cm 2.0cm 2.0cm 2.5cm' : '1.2cm 1.0cm'} !important;
               background-color: white !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
@@ -140,7 +140,14 @@ const RelatoriosPage = () => {
             <button 
               onClick={() => {
                 setViewMode('oficio');
-                setTimeout(() => window.print(), 150);
+                const originalTitle = document.title;
+                document.title = `Oficio mês ${meses[mes-1]}`;
+                setTimeout(() => {
+                  window.print();
+                  setTimeout(() => {
+                    document.title = originalTitle;
+                  }, 1000);
+                }, 150);
               }}
               className="bg-secondary hover:bg-secondary/90 text-foreground px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 font-bold shadow-sm flex-1 sm:flex-none justify-center"
             >
@@ -151,7 +158,14 @@ const RelatoriosPage = () => {
           <button 
             onClick={() => {
               setViewMode('folha');
-              setTimeout(() => window.print(), 150);
+              const originalTitle = document.title;
+              document.title = `Folha mês ${meses[mes-1]}`;
+              setTimeout(() => {
+                window.print();
+                setTimeout(() => {
+                  document.title = originalTitle;
+                }, 1000);
+              }, 150);
             }}
             className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20 flex-1 sm:flex-none justify-center"
           >
