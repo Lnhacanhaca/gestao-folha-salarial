@@ -64,6 +64,8 @@ const importar = async (req, res, next) => {
       await trx('folha_detalhes').insert(detalhes);
     }
 
+    await trx.commit();
+
     await logAction({
       userId: req.user.id,
       username: req.user.username,
@@ -73,7 +75,6 @@ const importar = async (req, res, next) => {
       details: `Lançadas/Atualizadas horas para o curso ID ${curso_id} do mês ${mes}/${ano}. Total de docentes: ${dados.length}.`
     });
 
-    await trx.commit();
     res.json({ message: 'Dados importados com sucesso' });
   } catch (error) {
     await trx.rollback();
