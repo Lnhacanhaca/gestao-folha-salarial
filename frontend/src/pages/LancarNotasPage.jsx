@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, Loader2, UserPlus } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { getManagedCourseIds, LANCAR_COURSE_OPTIONS } from '../lib/cursos';
 
 const getWeeksDateRanges = (mes, ano) => {
   const ranges = [];
@@ -54,7 +55,8 @@ const LancarNotasPage = () => {
 
   useEffect(() => {
     if (user) {
-      const activeCursoId = user.role !== 'ADMIN' ? user.curso_id : (parseInt(localStorage.getItem('sgfs_cursoId')) || user.curso_id || 2);
+      const managedIds = getManagedCourseIds(user);
+      const activeCursoId = user.role !== 'ADMIN' ? managedIds[0] : (parseInt(localStorage.getItem('sgfs_cursoId')) || managedIds[0] || 2);
       setCursoId(activeCursoId);
       fetchFolha(mes, ano, activeCursoId);
     }
@@ -383,12 +385,18 @@ const LancarNotasPage = () => {
             disabled={user?.role !== 'ADMIN'}
             className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-muted"
           >
-            <option value={1}>Geral (Consolidado)</option>
-            <option value={2}>Contabilidade e Auditoria</option>
-            <option value={3}>Contabilidade e Administração Pública</option>
-            <option value={4}>Engenharia de Minas</option>
-            <option value={5}>Engenharia de Processamento Mineral</option>
-            <option value={6}>Engenharia Informática</option>
+            {(() => {
+              const managedIds = getManagedCourseIds(user);
+              if (user?.role === 'ADMIN') {
+                return LANCAR_COURSE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ));
+              } else {
+                return LANCAR_COURSE_OPTIONS.filter(opt => managedIds.includes(opt.value)).map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ));
+              }
+            })()}
           </select>
         </div>
       </div>

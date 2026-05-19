@@ -25,6 +25,7 @@ import {
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
+import { getManagedCourseIds, CURSO_NOME } from '../lib/cursos';
 
 const StatCard = ({ title, value, icon: Icon, description, trend, colorClass }) => (
   <div className="bg-card p-6 rounded-3xl border shadow-sm flex items-center justify-between hover:shadow-md transition-shadow relative overflow-hidden group">
@@ -66,16 +67,6 @@ const Dashboard = () => {
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
-  const getManagedCourseIds = (u) => {
-    if (!u || u.role === 'ADMIN') {
-      return [2, 3, 4, 5, 6];
-    }
-    const cid = parseInt(u.curso_id);
-    if (cid === 2 || cid === 3) return [2, 3];
-    if (cid === 4 || cid === 5) return [4, 5];
-    if (cid === 6) return [6];
-    return [cid];
-  };
 
   const fetchDashboardData = async () => {
     try {

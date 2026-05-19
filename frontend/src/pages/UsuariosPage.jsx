@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserPlus, Shield, User, Loader2, Edit2, Trash2, X, Save, Key, BookOpen } from 'lucide-react';
 import api from '../services/api';
+import { CURSO_NOME, CURSOS_GERIDOS_LABEL } from '../lib/cursos';
 
 const UsuariosPage = () => {
   const queryClient = useQueryClient();
@@ -128,22 +129,6 @@ const UsuariosPage = () => {
     }
   };
 
-  const CURSOS_NOMES = {
-    2: "Contabilidade e Auditoria",
-    3: "Contabilidade e Administração Pública",
-    4: "Engenharia de Minas",
-    5: "Engenharia de Processamento Mineral",
-    6: "Engenharia Informática"
-  };
-
-  // Mapping: curso_id => courses managed in dashboard (same logic as Dashboard.jsx)
-  const CURSOS_GERIDOS_LABEL = {
-    2: "Contabilidade e Auditoria + Contabilidade e Administração Pública",
-    3: "Contabilidade e Auditoria + Contabilidade e Administração Pública",
-    4: "Engenharia de Minas + Processamento Mineral",
-    5: "Engenharia de Minas + Processamento Mineral",
-    6: "Engenharia Informática"
-  };
 
   const CURSOS_OPCOES = [
     { value: 2, label: "Director de Contabilidade e Auditoria", detail: "Gere: Contabilidade e Auditoria + Contabilidade e Administração Pública" },
@@ -197,7 +182,7 @@ const UsuariosPage = () => {
                     <span>Cursos que gere</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed pl-0.5">
-                    {CURSOS_GERIDOS_LABEL[u.curso_id] || CURSOS_NOMES[u.curso_id] || `Curso ID: ${u.curso_id}`}
+                    {CURSOS_GERIDOS_LABEL[u.curso_id] || CURSO_NOME[u.curso_id] || `Curso ID: ${u.curso_id}`}
                   </p>
                 </div>
               )}

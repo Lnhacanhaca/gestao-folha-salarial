@@ -3,6 +3,7 @@ import { Printer, FileText, Loader2 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { numeroPorExtenso } from '../lib/extenso';
+import { dbCursoIdToReportId, REPORT_COURSE_OPTIONS, getManagedCourseIds, reportIdToDbCursoIds } from '../lib/cursos';
 
 const getWeeksDateRanges = (mes, ano) => {
   const ranges = [];
@@ -55,7 +56,10 @@ const RelatoriosPage = () => {
   const { user } = useAuth();
   const [mes, setMes] = useState(new Date().getMonth() + 1);
   const [ano, setAno] = useState(new Date().getFullYear());
-  const [cursoId, setCursoId] = useState(user?.curso_id || 1);
+  const [cursoId, setCursoId] = useState(() => {
+    if (user && user.role !== 'ADMIN') return dbCursoIdToReportId(user.curso_id);
+    return 1;
+  });
   const [dados, setDados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState('folha'); // 'folha' or 'oficio'
@@ -91,7 +95,7 @@ const RelatoriosPage = () => {
 
   useEffect(() => {
     if (user && user.role !== 'ADMIN') {
-      setCursoId(user.curso_id || 2);
+      setCursoId(dbCursoIdToReportId(user.curso_id));
     }
   }, [user]);
 
@@ -242,10 +246,18 @@ const RelatoriosPage = () => {
             disabled={user?.role !== 'ADMIN'}
             className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-muted font-medium"
           >
-            <option value={1}>Geral (Todos os Cursos)</option>
-            <option value={2}>Contabilidade e Auditoria e Contabilidade e Administração Pública</option>
-            <option value={3}>Engenharia de Minas e Engenharia de Processamento Mineral</option>
-            <option value={4}>Engenharia Informática</option>
+            {(() => {
+              if (user?.role === 'ADMIN') {
+                return REPORT_COURSE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ));
+              } else {
+                const userReportId = dbCursoIdToReportId(user?.curso_id);
+                return REPORT_COURSE_OPTIONS.filter(opt => opt.value === userReportId).map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ));
+              }
+            })()}
           </select>
         </div>
       </div>
