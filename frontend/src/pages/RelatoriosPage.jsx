@@ -133,26 +133,38 @@ const RelatoriosPage = () => {
               size: ${viewMode === 'oficio' ? 'A4 portrait' : 'A4 landscape'};
               margin: 0;
             }
-            /* Force all background colors and graphics on layout containers to be white/transparent to avoid gray print background */
-            html,
-            body,
-            div,
-            main,
-            section,
-            table,
-            tr,
-            td {
-              background-color: white !important;
+            /* Reset layout elements for print to avoid flexbox pagination/clipping bugs */
+            html, 
+            body, 
+            #root,
+            div.min-h-screen,
+            div.flex.flex-1,
+            div.flex-1.flex.flex-col {
+              display: block !important;
+              height: auto !important;
+              min-height: 0 !important;
+              overflow: visible !important;
+              position: static !important;
               background: white !important;
-              box-shadow: none !important;
+              background-color: white !important;
+              margin: 0 !important;
+              padding: 0 !important;
             }
-            /* Keep only the table header cell backgrounds as light gray */
-            thead th {
-              background-color: #f3f4f6 !important;
-              background: #f3f4f6 !important;
+            /* Reset main page container to avoid margins/shadows/clipping */
+            main {
+              display: block !important;
+              height: auto !important;
+              min-height: 0 !important;
+              overflow: visible !important;
+              position: static !important;
+              background: white !important;
+              background-color: white !important;
+              margin: 0 !important;
+              padding: 0 !important;
+              max-width: none !important;
+              width: 100% !important;
             }
             body {
-              margin: 0 !important;
               padding: ${viewMode === 'oficio' ? '2.0cm 2.0cm 2.0cm 2.5cm' : '1.2cm 1.0cm'} !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
@@ -163,6 +175,23 @@ const RelatoriosPage = () => {
             .print-no-break {
               page-break-inside: avoid;
               break-inside: avoid;
+            }
+            div {
+              overflow: visible !important;
+            }
+            table {
+              width: 100% !important;
+              border-collapse: collapse !important;
+              page-break-inside: auto;
+            }
+            tr {
+              page-break-inside: avoid;
+              page-break-after: auto;
+            }
+            thead th {
+              background-color: #f3f4f6 !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
             }
           }
         `}
