@@ -324,7 +324,7 @@ const ImportarPage = () => {
       {/* Matrix Table */}
       <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
             <thead>
               <tr className="bg-secondary/50 border-b">
                 <th className="p-4 font-bold text-sm w-64">Docente</th>

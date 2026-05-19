@@ -198,7 +198,7 @@ const UsuariosPage = () => {
       {/* Glassmorphic Modal Dialog */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-card w-full max-w-md rounded-3xl border shadow-2xl p-6 relative overflow-hidden animate-in zoom-in-95 duration-200">
+          <div className="bg-card w-full max-w-md rounded-3xl border shadow-2xl p-6 relative overflow-hidden max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200">
             <button 
               onClick={closeModal}
               className="absolute top-4 right-4 text-muted-foreground hover:text-foreground p-1 rounded-lg hover:bg-secondary/50 transition-colors"

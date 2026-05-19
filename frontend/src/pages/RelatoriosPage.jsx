@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, FileText, Download, Loader2, ChevronRight } from 'lucide-react';
+import { Printer, FileText, Loader2, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { numeroPorExtenso } from '../lib/extenso';
@@ -55,7 +55,6 @@ const RelatoriosPage = () => {
     }
   }, [user]);
 
-  // Handle course change to reset view if needed
   useEffect(() => {
     if (cursoId !== 1) setViewMode('folha');
   }, [cursoId]);
@@ -67,53 +66,73 @@ const RelatoriosPage = () => {
           @media print {
             @page {
               size: ${viewMode === 'oficio' ? 'portrait' : 'landscape'};
-              margin: 1cm;
+              margin: 0; /* Hides default browser header (date, title) and footer (URL) */
+            }
+            body {
+              margin: 0 !important;
+              padding: 1.8cm 1.5cm !important;
+              background-color: white !important;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .no-print {
+              display: none !important;
+            }
+            .print-no-break {
+              page-break-inside: avoid;
+              break-inside: avoid;
+            }
+            .print-shadow-none {
+              box-shadow: none !important;
+              border: none !important;
+              padding: 0 !important;
+              min-height: auto !important;
             }
           }
         `}
       </style>
 
       {/* Header - No Print */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
         <div>
           <h1 className="text-3xl font-bold">Relatórios e Folhas</h1>
           <p className="text-muted-foreground">Visualize e imprima as folhas de pagamento mensais</p>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2.5">
           {cursoId === 1 && (
             <button 
               onClick={() => {
                 setViewMode('oficio');
-                setTimeout(() => window.print(), 100);
+                setTimeout(() => window.print(), 150);
               }}
-              className="bg-secondary hover:bg-secondary/90 text-foreground px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-sm"
+              className="bg-secondary hover:bg-secondary/90 text-foreground px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 font-bold shadow-sm flex-1 sm:flex-none justify-center"
             >
-              <FileText size={20} />
+              <FileText size={18} />
               Imprimir Ofício
             </button>
           )}
           <button 
             onClick={() => {
               setViewMode('folha');
-              setTimeout(() => window.print(), 100);
+              setTimeout(() => window.print(), 150);
             }}
-            className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20"
+            className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20 flex-1 sm:flex-none justify-center"
           >
-            <Printer size={20} />
+            <Printer size={18} />
             Imprimir Folha
           </button>
         </div>
       </div>
 
       {/* Selectors - No Print */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-card p-6 rounded-2xl border shadow-sm no-print">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-card p-6 rounded-2xl border shadow-sm no-print">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-muted-foreground">Mês</label>
           <select 
             value={mes} 
             onChange={(e) => setMes(parseInt(e.target.value))}
-            className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 font-medium"
           >
             {meses.map((m, i) => (
               <option key={i} value={i + 1}>{m}</option>
@@ -126,16 +145,16 @@ const RelatoriosPage = () => {
             type="number" 
             value={ano} 
             onChange={(e) => setAno(parseInt(e.target.value))}
-            className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 font-medium"
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 sm:col-span-2 md:col-span-1">
           <label className="text-sm font-semibold text-muted-foreground">Curso</label>
           <select 
             value={cursoId} 
             onChange={(e) => setCursoId(parseInt(e.target.value))}
             disabled={user?.role !== 'ADMIN'}
-            className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-muted"
+            className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-muted font-medium"
           >
             <option value={1}>Geral (Todos os Cursos)</option>
             <option value={2}>Contabilidade e Auditoria e Contabilidade e Administração Pública</option>
@@ -147,54 +166,56 @@ const RelatoriosPage = () => {
 
       {/* Ofício - Print Ready (Only for Geral) */}
       {cursoId === 1 && !loading && viewMode === 'oficio' && (
-        <div className="bg-white text-black p-8 rounded-2xl border shadow-sm print:shadow-none print:border-none print:p-0 mb-6 min-h-[1000px]">
-          <div className="text-center mb-8">
-            <img src="/emblema.png" alt="República de Moçambique" className="h-20 mx-auto mb-2 object-contain" />
-            <h2 className="font-bold uppercase">República de Moçambique</h2>
-            <div className="my-6">
-              <h2 className="text-lg font-bold uppercase">Instituto Superior Politécnico Tete</h2>
-              <h3 className="font-bold uppercase">(ISPT)</h3>
+        <div className="bg-white text-black p-8 rounded-2xl border shadow-sm print-shadow-none mb-6 min-h-[1000px] flex flex-col justify-between">
+          <div>
+            <div className="text-center mb-8">
+              <img src="/emblema.png" alt="República de Moçambique" className="h-20 mx-auto mb-2 object-contain" />
+              <h2 className="font-bold uppercase text-xs sm:text-sm tracking-wider">República de Moçambique</h2>
+              <div className="my-6">
+                <h2 className="text-sm sm:text-base font-bold uppercase tracking-wide">Instituto Superior Politécnico de Tete</h2>
+                <h3 className="font-bold uppercase text-xs sm:text-sm">(ISPT)</h3>
+              </div>
+            </div>
+
+            <div className="mt-16 space-y-12 px-4 sm:px-8 max-w-4xl mx-auto text-justify text-sm">
+              <p className="font-bold">
+                Para: Director Geral Adjunto por Área de Administração e Finanças
+              </p>
+
+              <p>
+                <span className="font-bold">Assunto:</span> <span className="underline">Pagamento de Salário referente ao mês de {meses[mes-1]} de {ano}</span>
+              </p>
+
+              <div className="space-y-6 leading-relaxed">
+                <p>
+                  1. Em anexo, se envia o mapa referente a aulas programadas e dadas pelos docentes e os respectivos valores a serem remunerados.
+                </p>
+                <p>
+                  2. É de referir que o valor total a ser remunerado aos docentes é de <span className="font-bold">{valorTotalMts.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} Mts</span> ({valorExtenso}).
+                </p>
+                <p>
+                  3. À consideração Superior.
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="mt-16 space-y-12 px-8 max-w-4xl mx-auto text-justify">
-            <p className="font-bold">
-              Para: Director Geral Adjunto por Área de Administração e Finanças
-            </p>
+          <div className="mt-20 text-center space-y-10 px-4 sm:px-8 max-w-4xl mx-auto w-full print-no-break">
+            <p className="text-sm">Tete, {new Date().getDate()} de {meses[new Date().getMonth()]} de {new Date().getFullYear()}</p>
+            <p className="font-bold uppercase tracking-wider text-xs">Os Directores de Curso</p>
 
-            <p>
-              <span className="font-bold">Assunto:</span> <span className="underline">Pagamento de Salário referente ao mês de {meses[mes-1]} de {ano}</span>
-            </p>
-
-            <div className="space-y-6 leading-relaxed">
-              <p>
-                1. Em anexo, se envia o mapa referente a aulas programadas e dadas pelos docentes e os respectivos valores a serem remunerados.
-              </p>
-              <p>
-                2. É de referir que o valor total a ser remunerado aos docentes é de <span className="font-bold">{valorTotalMts.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}Mts</span> ({valorExtenso}).
-              </p>
-              <p>
-                3. À consideração Superior.
-              </p>
-            </div>
-
-            <div className="mt-20 text-center space-y-6">
-              <p>Tete, {new Date().getDate()} de {meses[new Date().getMonth()]} de {new Date().getFullYear()}</p>
-              <p>Os Directores de Curso</p>
-
-              <div className="flex flex-col items-center gap-8 mt-12">
-                <div className="space-y-2">
-                  <div className="border-b border-black w-64"></div>
-                  <p className="text-sm">/MSc. Lucas Jordão Simoco/</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="border-b border-black w-64"></div>
-                  <p className="text-sm">/MSc. Almeida Albuquerque/</p>
-                </div>
-                <div className="space-y-2">
-                  <div className="border-b border-black w-64"></div>
-                  <p className="text-sm">/MSc. Luís Jorge Nhacanhaca/</p>
-                </div>
+            <div className="flex flex-col sm:flex-row justify-around items-center gap-8 mt-12 w-full">
+              <div className="space-y-2">
+                <div className="border-b border-black w-52"></div>
+                <p className="text-xs font-semibold">/MSc. Lucas Jordão Simoco/</p>
+              </div>
+              <div className="space-y-2">
+                <div className="border-b border-black w-52"></div>
+                <p className="text-xs font-semibold">/MSc. Almeida Albuquerque/</p>
+              </div>
+              <div className="space-y-2">
+                <div className="border-b border-black w-52"></div>
+                <p className="text-xs font-semibold">/MSc. Luís Jorge Nhacanhaca/</p>
               </div>
             </div>
           </div>
@@ -203,181 +224,187 @@ const RelatoriosPage = () => {
 
       {/* Report Sheet - Print Ready */}
       {viewMode === 'folha' && (
-        <div className="bg-white text-black p-8 rounded-2xl border shadow-sm min-h-[1000px] print:shadow-none print:border-none print:p-0">
-        <div className="text-center mb-6">
-          <div className="flex justify-center mb-2">
-            <img src="/logo.png" alt="Instituto Superior Politécnico de Tete" className="h-24 object-contain" />
+        <div className="bg-white text-black p-8 rounded-2xl border shadow-sm min-h-[1000px] print-shadow-none">
+          <div className="text-center mb-6">
+            <div className="flex justify-center mb-2">
+              <img src="/logo.png" alt="Instituto Superior Politécnico de Tete" className="h-24 object-contain" />
+            </div>
+            <h3 className="text-sm sm:text-base font-bold uppercase mt-2 leading-snug">
+              {cursoId === 1 ? 'Direcção do Curso Nocturno' : 
+               cursoId === 2 ? 'Direcção do Curso Contabilidade e Auditoria e Contabilidade e Administração Pública Pos-laboral' :
+               cursoId === 3 ? 'Direcção do Curso Engenharia de Minas e Engenharia de Processamento Mineral Pos-laboral' :
+               cursoId === 4 ? 'Direcção do Curso Engenharia Informática Pos-laboral' : ''}
+            </h3>
+            <p className="mt-4 font-bold text-xs sm:text-sm">
+              Relação das Aulas Dadas por Docentes no Curso Nocturno - Mês de {meses[mes-1]} / {ano}
+            </p>
           </div>
-          <h3 className="text-lg font-bold uppercase mt-2">
-            {cursoId === 1 ? 'Direcção do Curso Nocturno' : 
-             cursoId === 2 ? 'Direcção do Curso Contabilidade e Auditoria e Contabilidade e Administração Pública Pos-laboral' :
-             cursoId === 3 ? 'Direcção do Curso Engenharia de Minas e Engenharia de Processamento Mineral Pos-laboral' :
-             cursoId === 4 ? 'Direcção do Curso Engenharia Informática Pos-laboral' : ''}
-          </h3>
-          <p className="mt-4 font-bold text-sm">
-            Relação das Aulas Dadas por Docentes no Curso Nocturno - Mês de {meses[mes-1]} / {ano}
-          </p>
-        </div>
 
-        {loading ? (
-          <div className="flex flex-col items-center justify-center p-20 gap-4">
-            <Loader2 className="animate-spin text-primary" size={40} />
-            <p className="text-muted-foreground">Processando dados...</p>
-          </div>
-        ) : (
-          <table className="w-full border-collapse text-[10px] text-center">
-            <thead>
-              <tr className="bg-gray-200 border-2 border-black">
-                <th rowSpan={3} className="p-1 border-2 border-black w-8">Nº</th>
-                <th rowSpan={3} className="p-1 border-2 border-black w-48 text-left">Docentes</th>
-                <th colSpan={10} className="p-1 border-2 border-black">Aulas Mensais</th>
-                <th colSpan={2} rowSpan={2} className="p-1 border-2 border-black">Total de Horas</th>
-                <th colSpan={2} rowSpan={2} className="p-1 border-2 border-black">Valor a Receber das Aulas</th>
-              </tr>
-              <tr className="bg-gray-200 border-2 border-black">
-                <th colSpan={2} className="p-1 border-2 border-black">1ª Semana</th>
-                <th colSpan={2} className="p-1 border-2 border-black">2ª Semana</th>
-                <th colSpan={2} className="p-1 border-2 border-black">3ª Semana</th>
-                <th colSpan={2} className="p-1 border-2 border-black">4ª Semana</th>
-                <th colSpan={2} className="p-1 border-2 border-black">5ª Semana</th>
-              </tr>
-              <tr className="bg-gray-200 border-2 border-black text-[9px]">
-                <th className="p-1 border-2 border-black w-8">AP</th>
-                <th className="p-1 border-2 border-black w-8">AD</th>
-                <th className="p-1 border-2 border-black w-8">AP</th>
-                <th className="p-1 border-2 border-black w-8">AD</th>
-                <th className="p-1 border-2 border-black w-8">AP</th>
-                <th className="p-1 border-2 border-black w-8">AD</th>
-                <th className="p-1 border-2 border-black w-8">AP</th>
-                <th className="p-1 border-2 border-black w-8">AD</th>
-                <th className="p-1 border-2 border-black w-8">AP</th>
-                <th className="p-1 border-2 border-black w-8">AD</th>
-                <th className="p-1 border-2 border-black">Programadas</th>
-                <th className="p-1 border-2 border-black">Dadas</th>
-                <th className="p-1 border-2 border-black">Programadas</th>
-                <th className="p-1 border-2 border-black">Dadas</th>
-              </tr>
-            </thead>
-            <tbody>
-              {dados.map((row, idx) => {
-                const s = row.semanas || Array(5).fill({ap: 0, ad: 0});
-                const s1 = s[0] || {ap: 0, ad: 0};
-                const s2 = s[1] || {ap: 0, ad: 0};
-                const s3 = s[2] || {ap: 0, ad: 0};
-                const s4 = s[3] || {ap: 0, ad: 0};
-                const s5 = s[4] || {ap: 0, ad: 0};
+          {loading ? (
+            <div className="flex flex-col items-center justify-center p-20 gap-4">
+              <Loader2 className="animate-spin text-primary" size={40} />
+              <p className="text-muted-foreground font-semibold">Processando dados...</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto w-full border rounded-2xl shadow-inner scrollbar-thin print:border-none print:shadow-none">
+              <table className="w-full border-collapse text-[10px] text-center min-w-[950px] print:min-w-0">
+                <thead>
+                  <tr className="bg-gray-200 border-2 border-black">
+                    <th rowSpan={3} className="p-1.5 border-2 border-black w-8">Nº</th>
+                    <th rowSpan={3} className="p-1.5 border-2 border-black w-56 text-left">Docentes</th>
+                    <th colSpan={10} className="p-1.5 border-2 border-black">Aulas Mensais</th>
+                    <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Total de Horas</th>
+                    <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Valor a Receber das Aulas</th>
+                  </tr>
+                  <tr className="bg-gray-200 border-2 border-black">
+                    <th colSpan={2} className="p-1 border-2 border-black">1ª Semana</th>
+                    <th colSpan={2} className="p-1 border-2 border-black">2ª Semana</th>
+                    <th colSpan={2} className="p-1 border-2 border-black">3ª Semana</th>
+                    <th colSpan={2} className="p-1 border-2 border-black">4ª Semana</th>
+                    <th colSpan={2} className="p-1 border-2 border-black">5ª Semana</th>
+                  </tr>
+                  <tr className="bg-gray-200 border-2 border-black text-[9px]">
+                    <th className="p-1 border-2 border-black w-8">AP</th>
+                    <th className="p-1 border-2 border-black w-8">AD</th>
+                    <th className="p-1 border-2 border-black w-8">AP</th>
+                    <th className="p-1 border-2 border-black w-8">AD</th>
+                    <th className="p-1 border-2 border-black w-8">AP</th>
+                    <th className="p-1 border-2 border-black w-8">AD</th>
+                    <th className="p-1 border-2 border-black w-8">AP</th>
+                    <th className="p-1 border-2 border-black w-8">AD</th>
+                    <th className="p-1 border-2 border-black w-8">AP</th>
+                    <th className="p-1 border-2 border-black w-8">AD</th>
+                    <th className="p-1 border-2 border-black">Programadas</th>
+                    <th className="p-1 border-2 border-black">Dadas</th>
+                    <th className="p-1 border-2 border-black">Programadas</th>
+                    <th className="p-1 border-2 border-black">Dadas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dados.map((row, idx) => {
+                    const s = row.semanas || Array(5).fill({ap: 0, ad: 0});
+                    const s1 = s[0] || {ap: 0, ad: 0};
+                    const s2 = s[1] || {ap: 0, ad: 0};
+                    const s3 = s[2] || {ap: 0, ad: 0};
+                    const s4 = s[3] || {ap: 0, ad: 0};
+                    const s5 = s[4] || {ap: 0, ad: 0};
 
-                return (
-                  <tr key={idx} className="border-2 border-black hover:bg-gray-50">
-                    <td className="p-1 border-2 border-black">{idx + 1}</td>
-                    <td className="p-1 border-2 border-black text-left font-medium">
-                      {row.docente_nome}
-                      {(row.retificada === 1 || row.retificada === true) && (
-                        <span className="text-[8px] text-amber-600 font-extrabold ml-1 print:text-black">
-                          (Retificada)
-                        </span>
-                      )}
-                    </td>
+                    return (
+                      <tr key={idx} className="border-2 border-black hover:bg-gray-50">
+                        <td className="p-1.5 border-2 border-black">{idx + 1}</td>
+                        <td className="p-1.5 border-2 border-black text-left font-medium">
+                          {row.docente_nome}
+                          {(row.retificada === 1 || row.retificada === true) && (
+                            <span className="text-[8px] text-amber-600 font-extrabold ml-1 print:text-black">
+                              (Retificada)
+                            </span>
+                          )}
+                        </td>
+                        
+                        <td className="p-1.5 border-2 border-black">{s1.ap || 0}</td>
+                        <td className="p-1.5 border-2 border-black">{s1.ad || 0}</td>
+                        <td className="p-1.5 border-2 border-black">{s2.ap || 0}</td>
+                        <td className="p-1.5 border-2 border-black">{s2.ad || 0}</td>
+                        <td className="p-1.5 border-2 border-black">{s3.ap || 0}</td>
+                        <td className="p-1.5 border-2 border-black">{s3.ad || 0}</td>
+                        <td className="p-1.5 border-2 border-black">{s4.ap || 0}</td>
+                        <td className="p-1.5 border-2 border-black">{s4.ad || 0}</td>
+                        <td className="p-1.5 border-2 border-black">{s5.ap || 0}</td>
+                        <td className="p-1.5 border-2 border-black">{s5.ad || 0}</td>
+
+                        <td className="p-1.5 border-2 border-black font-semibold">{row.total_ap}</td>
+                        <td className="p-1.5 border-2 border-black font-extrabold">{row.total_ad}</td>
+                        
+                        <td className="p-1.5 border-2 border-black">
+                          {(row.total_ap * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="p-1.5 border-2 border-black font-extrabold">
+                          {(row.total_ad * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {/* Total Row */}
+                  <tr className="border-2 border-black bg-gray-200 font-bold">
+                    <td colSpan={2} className="p-1.5 text-center">Total Geral</td>
                     
-                    <td className="p-1 border-2 border-black">{s1.ap || 0}</td>
-                    <td className="p-1 border-2 border-black">{s1.ad || 0}</td>
-                    <td className="p-1 border-2 border-black">{s2.ap || 0}</td>
-                    <td className="p-1 border-2 border-black">{s2.ad || 0}</td>
-                    <td className="p-1 border-2 border-black">{s3.ap || 0}</td>
-                    <td className="p-1 border-2 border-black">{s3.ad || 0}</td>
-                    <td className="p-1 border-2 border-black">{s4.ap || 0}</td>
-                    <td className="p-1 border-2 border-black">{s4.ad || 0}</td>
-                    <td className="p-1 border-2 border-black">{s5.ap || 0}</td>
-                    <td className="p-1 border-2 border-black">{s5.ad || 0}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ap) || 0), 0)}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ad) || 0), 0)}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ap) || 0), 0)}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ad) || 0), 0)}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ap) || 0), 0)}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ad) || 0), 0)}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ap) || 0), 0)}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ad) || 0), 0)}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ap) || 0), 0)}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ad) || 0), 0)}</td>
 
-                    <td className="p-1 border-2 border-black font-medium">{row.total_ap}</td>
-                    <td className="p-1 border-2 border-black font-bold">{row.total_ad}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ap || 0), 0)}</td>
+                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ad || 0), 0)}</td>
                     
-                    <td className="p-1 border-2 border-black">
-                      {(row.total_ap * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                    <td className="p-1.5 border-2 border-black">
+                      {(dados.reduce((acc, r) => acc + (r.total_ap || 0), 0) * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="p-1 border-2 border-black font-bold">
-                      {(row.total_ad * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                    <td className="p-1.5 border-2 border-black">
+                      {(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
-                );
-              })}
-              {/* Total Row */}
-              <tr className="border-2 border-black bg-gray-200 font-bold">
-                <td colSpan={2} className="p-1 text-center">Total Geral</td>
-                
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ap) || 0), 0)}</td>
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ad) || 0), 0)}</td>
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ap) || 0), 0)}</td>
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ad) || 0), 0)}</td>
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ap) || 0), 0)}</td>
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ad) || 0), 0)}</td>
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ap) || 0), 0)}</td>
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ad) || 0), 0)}</td>
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ap) || 0), 0)}</td>
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ad) || 0), 0)}</td>
-
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ap || 0), 0)}</td>
-                <td className="p-1 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ad || 0), 0)}</td>
-                
-                <td className="p-1 border-2 border-black">
-                  {(dados.reduce((acc, r) => acc + (r.total_ap || 0), 0) * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
-                </td>
-                <td className="p-1 border-2 border-black">
-                  {(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        )}
-
-        {/* Dynamic Signatures Footer */}
-        <div className="mt-20 grid grid-cols-3 gap-8">
-          {cursoId === 1 ? (
-             // Consolidade View - 3 Director Signatures
-             <>
-               <div className="text-center space-y-8">
-                 <p className="text-sm font-bold">O Coordenador de Curso (CA/CAP)</p>
-                 <div className="border-b border-black w-48 mx-auto"></div>
-                 <p className="text-xs">Msc. Almeida Albuquerque</p>
-               </div>
-               <div className="text-center space-y-8">
-                 <p className="text-sm font-bold">O Coordenador de Curso (EM/EPM)</p>
-                 <div className="border-b border-black w-48 mx-auto"></div>
-                 <p className="text-xs">Msc. Lucas Simoco</p>
-               </div>
-               <div className="text-center space-y-8">
-                 <p className="text-sm font-bold">O Coordenador de Curso (EI)</p>
-                 <div className="border-b border-black w-48 mx-auto"></div>
-                 <p className="text-xs">Msc. Luís Jorge Nhacanhaca</p>
-               </div>
-             </>
-          ) : (
-            // Single Course View
-            <>
-              <div></div>
-              <div className="text-center space-y-8">
-                <p className="text-sm font-bold">
-                  {cursoId === 2 ? 'O Director do Curso Contabilidade e Auditoria e Contabilidade e Administração Pública Pos-laboral' :
-                   cursoId === 3 ? 'O Director do Curso Engenharia de Minas e Engenharia de Processamento Mineral Pos-laboral' :
-                   cursoId === 4 ? 'O Director do Curso Engenharia Informática Pos-laboral' : ''}
-                </p>
-                <div className="border-b border-black w-64 mx-auto"></div>
-                <p className="text-xs">
-                  {cursoId === 2 ? '/MSc. Almeida Ismael de Albuquerque/' : 
-                   cursoId === 3 ? '/MSc. Lucas Jordão Simoco/' : 
-                   cursoId === 4 ? '/MSc. Luís Jorge Nhacanhaca/' : ''}
-                </p>
-              </div>
-              <div></div>
-            </>
+                </tbody>
+              </table>
+            </div>
           )}
-        </div>
 
-        <div className="mt-12 text-center text-[10px] text-gray-400 no-print">
-          Este documento foi gerado electronicamente pelo SGFS em {new Date().toLocaleDateString('pt-PT')}
+          {/* Dynamic Signatures Footer */}
+          <div className="mt-16 flex flex-col sm:flex-row justify-around items-end gap-10 print-no-break w-full">
+            {cursoId === 1 ? (
+               // Consolidade View - 3 Director Signatures
+               <>
+                 <div className="text-center space-y-6 flex-1 max-w-[200px]">
+                   <p className="text-[9px] font-bold uppercase tracking-wider leading-tight">O Coordenador de Curso (CA/CAP)</p>
+                   <div className="h-10 flex items-end justify-center">
+                     <div className="border-b border-black w-40"></div>
+                   </div>
+                   <p className="text-[10px] font-semibold">Msc. Almeida Albuquerque</p>
+                 </div>
+                 <div className="text-center space-y-6 flex-1 max-w-[200px]">
+                   <p className="text-[9px] font-bold uppercase tracking-wider leading-tight">O Coordenador de Curso (EM/EPM)</p>
+                   <div className="h-10 flex items-end justify-center">
+                     <div className="border-b border-black w-40"></div>
+                   </div>
+                   <p className="text-[10px] font-semibold">Msc. Lucas Simoco</p>
+                 </div>
+                 <div className="text-center space-y-6 flex-1 max-w-[200px]">
+                   <p className="text-[9px] font-bold uppercase tracking-wider leading-tight">O Coordenador de Curso (EI)</p>
+                   <div className="h-10 flex items-end justify-center">
+                     <div className="border-b border-black w-40"></div>
+                   </div>
+                   <p className="text-[10px] font-semibold">Msc. Luís Jorge Nhacanhaca</p>
+                 </div>
+               </>
+            ) : (
+               // Single Course View - Beautifully Centered
+               <div className="text-center space-y-6 max-w-lg mx-auto flex-1">
+                 <p className="text-[9px] sm:text-xs font-bold uppercase tracking-wider leading-snug">
+                   {cursoId === 2 ? 'O Director do Curso Contabilidade e Auditoria e Contabilidade e Administração Pública Pos-laboral' :
+                    cursoId === 3 ? 'O Director do Curso Engenharia de Minas e Engenharia de Processamento Mineral Pos-laboral' :
+                    cursoId === 4 ? 'O Director do Curso Engenharia Informática Pos-laboral' : ''}
+                 </p>
+                 <div className="h-12 flex items-end justify-center">
+                   <div className="border-b border-black w-60"></div>
+                 </div>
+                 <p className="text-[10px] sm:text-xs font-semibold">
+                   {cursoId === 2 ? 'MSc. Almeida Ismael de Albuquerque' : 
+                    cursoId === 3 ? 'MSc. Lucas Jordão Simoco' : 
+                    cursoId === 4 ? 'MSc. Luís Jorge Nhacanhaca' : ''}
+                 </p>
+               </div>
+            )}
+          </div>
+
+          <div className="mt-12 text-center text-[10px] text-gray-400 no-print">
+            Este documento foi gerado electronicamente pelo SGFS em {new Date().toLocaleDateString('pt-PT')}
+          </div>
         </div>
-      </div>
       )}
     </div>
   );
