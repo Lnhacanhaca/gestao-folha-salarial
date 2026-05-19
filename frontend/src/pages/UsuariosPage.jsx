@@ -123,9 +123,11 @@ const UsuariosPage = () => {
   };
 
   const CURSOS_NOMES = {
-    2: "Contabilidade e Auditoria e Contabilidade e Administração Pública",
-    3: "Engenharia de Minas e Engenharia de Processamento Mineral",
-    4: "Engenharia Informática"
+    2: "Contabilidade e Auditoria",
+    3: "Contabilidade e Administração Pública",
+    4: "Engenharia de Minas",
+    5: "Engenharia de Processamento Mineral",
+    6: "Engenharia Informática"
   };
 
   return (
@@ -259,12 +261,14 @@ const UsuariosPage = () => {
                   <label className="text-sm font-medium">Curso Vinculado</label>
                   <select 
                     value={formData.curso_id}
-                    onChange={(e) => setFormData({ ...formData, curso_id: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, curso_id: parseInt(e.target.value) })}
                     className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 font-medium"
                   >
-                    <option value={2}>Contabilidade e Auditoria e Contabilidade e Administração Pública</option>
-                    <option value={3}>Engenharia de Minas e Engenharia de Processamento Mineral</option>
-                    <option value={4}>Engenharia Informática</option>
+                    <option value={2}>Contabilidade e Auditoria</option>
+                    <option value={3}>Contabilidade e Administração Pública</option>
+                    <option value={4}>Engenharia de Minas</option>
+                    <option value={5}>Engenharia de Processamento Mineral</option>
+                    <option value={6}>Engenharia Informática</option>
                   </select>
                 </div>
               )}

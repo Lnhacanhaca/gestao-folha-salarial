@@ -17,14 +17,14 @@ exports.seed = async function(knex) {
   await knex('users').insert([
     { username: 'admin', password: hashedPassword, role: 'ADMIN' },
     { username: 'almeida', password: directorPassword, role: 'DIRETOR_CURSO', curso_id: 2 },
-    { username: 'lucas', password: directorPassword, role: 'DIRETOR_CURSO', curso_id: 3 },
-    { username: 'luis', password: directorPassword, role: 'DIRETOR_CURSO', curso_id: 4 }
+    { username: 'lucas', password: directorPassword, role: 'DIRETOR_CURSO', curso_id: 4 },
+    { username: 'luis', password: directorPassword, role: 'DIRETOR_CURSO', curso_id: 6 }
   ]);
 
   await knex('docentes').insert([
-    { nome: 'Almeida Albuquerque', categoria: 'Mestre' },
-    { nome: 'Lucas Simoco', categoria: 'Mestre' },
-    { nome: 'Luís Jorge Nhacanhaca', categoria: 'Mestre' },
-    { nome: 'João Baptista', categoria: 'Licenciado' }
+    { nome: 'Almeida Albuquerque', categoria: 'Mestre', cursos: JSON.stringify([{ id: 2, ap: 16 }]) },
+    { nome: 'Lucas Simoco', categoria: 'Mestre', cursos: JSON.stringify([{ id: 4, ap: 12 }]) },
+    { nome: 'Luís Jorge Nhacanhaca', categoria: 'Mestre', cursos: JSON.stringify([{ id: 6, ap: 14 }]) },
+    { nome: 'João Baptista', categoria: 'Licenciado', cursos: JSON.stringify([{ id: 3, ap: 10 }, { id: 5, ap: 8 }]) }
   ]);
 };

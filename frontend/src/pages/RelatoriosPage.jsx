@@ -72,7 +72,7 @@ const RelatoriosPage = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      let endpoint = `/folhas/curso/${cursoId}?mes=${mes}&ano=${ano}`;
+      let endpoint = `/folhas/curso/${cursoId}?mes=${mes}&ano=${ano}&combined=true`;
       if (cursoId === 1) {
         endpoint = `/folhas/geral?mes=${mes}&ano=${ano}`;
       }

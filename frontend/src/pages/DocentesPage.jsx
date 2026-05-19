@@ -40,14 +40,35 @@ const DocentesPage = () => {
             const cursosKey = keys.find(k => k.toLowerCase().includes('curso') || k.toLowerCase().includes('leciona'));
             const apKey = keys.find(k => k.toLowerCase().includes('ap') || k.toLowerCase().includes('hora') || k.toLowerCase().includes('prog') || k.toLowerCase().includes('carga'));
             const apVal = apKey ? parseFloat(row[apKey]) || 0 : 0;
-            let cursosArray = [{ id: 2, ap: apVal }, { id: 3, ap: apVal }, { id: 4, ap: apVal }];
+            let cursosArray = [
+              { id: 2, ap: apVal },
+              { id: 3, ap: apVal },
+              { id: 4, ap: apVal },
+              { id: 5, ap: apVal },
+              { id: 6, ap: apVal }
+            ];
             
             if (cursosKey && row[cursosKey]) {
               const val = row[cursosKey].toLowerCase();
               const parsed = [];
-              if (val.includes('cont') || val.includes('ca') || val.includes('cap')) parsed.push({ id: 2, ap: apVal });
-              if (val.includes('min') || val.includes('em') || val.includes('epm')) parsed.push({ id: 3, ap: apVal });
-              if (val.includes('inf') || val.includes('ei')) parsed.push({ id: 4, ap: apVal });
+              if (val.includes('auditoria') || val.includes('ca')) {
+                parsed.push({ id: 2, ap: apVal });
+              } else if (val.includes('pública') || val.includes('publica') || val.includes('cap') || val.includes('administra')) {
+                parsed.push({ id: 3, ap: apVal });
+              } else if (val.includes('contab')) {
+                parsed.push({ id: 2, ap: apVal });
+                parsed.push({ id: 3, ap: apVal });
+              }
+
+              if (val.includes('minas') || val.includes('em')) {
+                parsed.push({ id: 4, ap: apVal });
+              } else if (val.includes('processa') || val.includes('epm') || val.includes('mineral')) {
+                parsed.push({ id: 5, ap: apVal });
+              }
+
+              if (val.includes('inf') || val.includes('ei')) {
+                parsed.push({ id: 6, ap: apVal });
+              }
               if (parsed.length > 0) cursosArray = parsed;
             }
 
@@ -77,9 +98,11 @@ const DocentesPage = () => {
 
   const CURSOS_OPCOES = [
     { id: 1, nome: "Geral" },
-    { id: 2, nome: "CA / CAP" },
-    { id: 3, nome: "EM / EPM" },
-    { id: 4, nome: "EI" }
+    { id: 2, nome: "Contabilidade e Auditoria" },
+    { id: 3, nome: "Contabilidade e Administração Pública" },
+    { id: 4, nome: "Engenharia de Minas" },
+    { id: 5, nome: "Engenharia de Processamento Mineral" },
+    { id: 6, nome: "Engenharia Informática" }
   ];
 
   const { data: docentes, isLoading } = useQuery({
@@ -164,7 +187,7 @@ const DocentesPage = () => {
       });
     } else {
       setEditingDocente(null);
-      setFormData({ nome: '', categoria: '', cursos: [{ id: 2, ap: 0 }, { id: 3, ap: 0 }, { id: 4, ap: 0 }] });
+      setFormData({ nome: '', categoria: '', cursos: [{ id: 2, ap: 0 }, { id: 3, ap: 0 }, { id: 4, ap: 0 }, { id: 5, ap: 0 }, { id: 6, ap: 0 }] });
     }
     setIsModalOpen(true);
   };

@@ -52,7 +52,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalDocentes: 0,
-    totalCursos: 3,
+    totalCursos: 5,
     totalAdHours: 0,
     totalValor: 0,
     courseDetails: []
@@ -86,9 +86,11 @@ const Dashboard = () => {
       // Compute statistics by Course
       // We check how many teachers belong to each course & sum their AP
       const courseStats = {
-        2: { id: 2, name: 'CA / CAP (Contabilidade)', teachers: 0, ap: 0, saved: false },
-        3: { id: 3, name: 'EM / EPM (Minas)', teachers: 0, ap: 0, saved: false },
-        4: { id: 4, name: 'EI (Informática)', teachers: 0, ap: 0, saved: false }
+        2: { id: 2, name: 'Contabilidade e Auditoria', teachers: 0, ap: 0, saved: false },
+        3: { id: 3, name: 'Contabilidade e Administração Pública', teachers: 0, ap: 0, saved: false },
+        4: { id: 4, name: 'Engenharia de Minas', teachers: 0, ap: 0, saved: false },
+        5: { id: 5, name: 'Engenharia de Processamento Mineral', teachers: 0, ap: 0, saved: false },
+        6: { id: 6, name: 'Engenharia Informática', teachers: 0, ap: 0, saved: false }
       };
 
       docentes.forEach(doc => {
@@ -110,7 +112,7 @@ const Dashboard = () => {
       });
 
       // 3. Fetch course sheet statuses to check if saved
-      for (const cid of [2, 3, 4]) {
+      for (const cid of [2, 3, 4, 5, 6]) {
         try {
           const { data: courseSheet } = await api.get(`/folhas/curso/${cid}?mes=${activeMonth}&ano=${activeYear}`);
           if (courseSheet && courseSheet.length > 0) {
@@ -121,7 +123,7 @@ const Dashboard = () => {
 
       setStats({
         totalDocentes: docentes.length,
-        totalCursos: 3,
+        totalCursos: 5,
         totalAdHours: totalAd,
         totalValor: totalVal,
         courseDetails: Object.values(courseStats)
@@ -139,12 +141,12 @@ const Dashboard = () => {
 
   // Chart data formatting
   const chartData = stats.courseDetails.map(c => ({
-    name: c.id === 2 ? 'Contabilidade' : c.id === 3 ? 'Minas' : 'Informática',
+    name: c.id === 2 ? 'CA' : c.id === 3 ? 'CAP' : c.id === 4 ? 'Minas' : c.id === 5 ? 'Processam.' : 'Informática',
     'Docentes': c.teachers,
     'Horas Programadas (AP)': c.ap
   }));
 
-  const COLORS = ['#1e88e5', '#745af2', '#00acc1'];
+  const COLORS = ['#1e88e5', '#745af2', '#00acc1', '#f59e0b', '#10b981'];
 
   if (loading) {
     return (

@@ -71,9 +71,20 @@ const importar = async (req, res, next) => {
 const getByCurso = async (req, res, next) => {
   try {
     const { id: curso_id } = req.params;
-    const { mes, ano } = req.query;
+    const { mes, ano, combined } = req.query;
 
-    // 1. Fetch all docentes who are registered for this course in their profile
+    let targetCursoIds = [Number(curso_id)];
+    if (combined === 'true') {
+      if (Number(curso_id) === 2) {
+        targetCursoIds = [2, 3];
+      } else if (Number(curso_id) === 3) {
+        targetCursoIds = [4, 5];
+      } else if (Number(curso_id) === 4) {
+        targetCursoIds = [6];
+      }
+    }
+
+    // 1. Fetch all docentes who are registered for these courses in their profile
     const docentes = await db('docentes').select('*').orderBy('nome', 'asc');
     const courseDocentes = docentes.filter(doc => {
       try {
@@ -86,7 +97,7 @@ const getByCurso = async (req, res, next) => {
         } else if (typeof doc.cursos === 'number') {
           cursosArray = [{ id: doc.cursos, ap: 0 }];
         }
-        return cursosArray.some(c => (c.id || c) === Number(curso_id));
+        return cursosArray.some(c => targetCursoIds.includes(Number(c.id || c)));
       } catch {
         return false;
       }
@@ -94,17 +105,18 @@ const getByCurso = async (req, res, next) => {
 
     const courseDocenteIds = courseDocentes.map(d => d.id);
 
-    // 2. Fetch only sheets that belong to both this course and these valid teachers for this month/year
-    const savedFolhas = await db('folhas as f')
+    // 2. Fetch sheets belonging to any of the target courses for this month/year
+    const savedFolhas = courseDocenteIds.length > 0 ? await db('folhas as f')
       .select('f.*')
-      .where({ 'f.curso_id': curso_id, 'f.mes': mes, 'f.ano': ano })
-      .whereIn('f.docente_id', courseDocenteIds);
+      .where({ 'f.mes': mes, 'f.ano': ano })
+      .whereIn('f.curso_id', targetCursoIds)
+      .whereIn('f.docente_id', courseDocenteIds) : [];
 
     const folha_ids = savedFolhas.map(f => f.id);
     const detalhes = folha_ids.length > 0 ? await db('folha_detalhes').whereIn('folha_id', folha_ids) : [];
 
     const data = courseDocentes.map(doc => {
-      // Parse doc.cursos to find the weekly AP for this specific course
+      // Parse doc.cursos to find the weekly AP for target courses
       let apValue = 0;
       try {
         let cursosArray = [];
@@ -114,14 +126,16 @@ const getByCurso = async (req, res, next) => {
         } else if (Array.isArray(doc.cursos)) {
           cursosArray = doc.cursos;
         }
-        const cursoObj = cursosArray.find(c => (c.id || c) === Number(curso_id));
-        if (cursoObj && cursoObj.ap !== undefined) {
-          apValue = parseFloat(cursoObj.ap) || 0;
-        }
+        cursosArray.forEach(c => {
+          const cid = Number(c.id || c);
+          if (targetCursoIds.includes(cid)) {
+            apValue += parseFloat(c.ap) || 0;
+          }
+        });
       } catch (e) {}
 
-      // Find saved sheet
-      const saved = savedFolhas.find(f => f.docente_id === doc.id);
+      // Find saved sheets for this teacher
+      const teacherFolhas = savedFolhas.filter(f => f.docente_id === doc.id);
 
       // Weeks initialization
       const semanas = [
@@ -133,22 +147,22 @@ const getByCurso = async (req, res, next) => {
       ];
 
       let retificada = 0;
-      let observacoes = null;
+      let observacoes = [];
 
-      if (saved) {
-        retificada = saved.retificada || 0;
-        observacoes = saved.observacoes || null;
+      teacherFolhas.forEach(f => {
+        retificada = retificada || f.retificada || 0;
+        if (f.observacoes) {
+          observacoes.push(f.observacoes);
+        }
 
-        const f_detalhes = detalhes.filter(d => d.folha_id === saved.id);
+        const f_detalhes = detalhes.filter(d => d.folha_id === f.id);
         f_detalhes.forEach(d => {
           const idx = d.semana - 1;
           if (idx >= 0 && idx < 5) {
-            // ALWAYS override with the teacher profile's current AP!
-            semanas[idx].ap = apValue;
-            semanas[idx].ad = parseFloat(d.ad) || 0;
+            semanas[idx].ad += parseFloat(d.ad) || 0;
           }
         });
-      }
+      });
 
       // Recalculate totals
       const total_ap = semanas.reduce((acc, s) => acc + s.ap, 0);
@@ -161,7 +175,7 @@ const getByCurso = async (req, res, next) => {
         total_ad,
         valor_receber,
         retificada,
-        observacoes,
+        observacoes: observacoes.length > 0 ? observacoes.join('; ') : null,
         semanas
       };
     });
