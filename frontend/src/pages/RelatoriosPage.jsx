@@ -131,7 +131,7 @@ const RelatoriosPage = () => {
           @media print {
             @page {
               size: ${viewMode === 'oficio' ? 'A4 portrait' : 'A4 landscape'};
-              margin: 0;
+              margin: ${viewMode === 'oficio' ? '2.0cm 2.0cm 2.5cm 2.5cm' : '1.2cm 1.0cm 2.4cm 1.0cm'};
             }
             /* Reset layout elements for print to avoid flexbox pagination/clipping bugs */
             html, 
@@ -165,7 +165,8 @@ const RelatoriosPage = () => {
               width: 100% !important;
             }
             body {
-              padding: ${viewMode === 'oficio' ? '2.0cm 2.0cm 2.0cm 2.5cm' : '1.2cm 1.0cm'} !important;
+              padding: 0 !important;
+              margin: 0 !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
             }
