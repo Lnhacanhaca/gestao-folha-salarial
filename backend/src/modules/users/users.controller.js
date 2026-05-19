@@ -91,4 +91,38 @@ const remove = async (req, res, next) => {
   }
 };
 
-module.exports = { getAll, create, update, remove };
+const updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { username, password } = req.body;
+    
+    if (!username) {
+      return res.status(400).json({ error: { message: "O nome de utilizador é obrigatório" }});
+    }
+
+    const data = { username };
+    if (password) {
+      data.password = await bcrypt.hash(password, 10);
+    }
+
+    await db('users').where({ id: userId }).update(data);
+
+    await logAction({
+      userId: req.user.id,
+      username: username,
+      action: 'UPDATE_PROFILE',
+      targetType: 'users',
+      targetId: userId,
+      details: `O utilizador "${req.user.username}" atualizou o seu próprio perfil (Novo nome: ${username}).`
+    });
+
+    res.json({ message: 'Perfil atualizado com sucesso', username });
+  } catch (error) {
+    if (error.code === 'SQLITE_CONSTRAINT' || error.message.includes('UNIQUE')) {
+       return res.status(400).json({ error: { message: 'Este nome de utilizador já está em uso.' } });
+    }
+    next(error);
+  }
+};
+
+module.exports = { getAll, create, update, remove, updateProfile };

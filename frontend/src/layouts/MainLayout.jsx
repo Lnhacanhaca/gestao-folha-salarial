@@ -16,6 +16,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import ProfileModal from '../components/ProfileModal';
 
 function cn(...inputs) {
   return twMerge(clsx(inputs));
@@ -42,6 +43,7 @@ const MainLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
 
   const menuItems = [
     { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -124,13 +126,17 @@ const MainLayout = () => {
           </nav>
 
           <div className="p-6 border-t border-slate-50 space-y-4">
-             <div className="bg-secondary/40 p-4 rounded-2xl border border-secondary/50 flex flex-col gap-1">
-                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide">Acesso Ativo</span>
+             <button
+                onClick={() => setIsProfileModalOpen(true)}
+                className="w-full bg-secondary/40 hover:bg-secondary p-4 rounded-2xl border border-secondary/50 flex flex-col gap-1 transition-all text-left cursor-pointer group shadow-sm"
+                title="Editar o meu perfil"
+             >
+                <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wide group-hover:text-primary transition-colors">Acesso Ativo</span>
                 <span className="text-xs font-bold text-foreground flex items-center gap-1">
                   {user?.role === 'ADMIN' ? <ShieldAlert size={12} className="text-primary" /> : <User size={12} className="text-primary" />}
                   {user?.username}
                 </span>
-             </div>
+             </button>
              
              <button
               onClick={handleLogout}
@@ -184,10 +190,13 @@ const MainLayout = () => {
              </div>
              
              <div className="p-6 border-t space-y-4">
-               <div className="bg-secondary/40 p-4 rounded-2xl border flex flex-col gap-1">
-                  <span className="text-[10px] font-bold text-muted-foreground uppercase">Utilizador</span>
+               <button
+                  onClick={() => { setIsMobileMenuOpen(false); setIsProfileModalOpen(true); }}
+                  className="w-full bg-secondary/40 hover:bg-secondary p-4 rounded-2xl border flex flex-col gap-1 transition-all text-left cursor-pointer group shadow-sm"
+               >
+                  <span className="text-[10px] font-bold text-muted-foreground uppercase group-hover:text-primary transition-colors">Acesso Ativo</span>
                   <span className="text-xs font-bold text-foreground">{user?.username} ({userRoleText})</span>
-               </div>
+               </button>
                <button
                 onClick={handleLogout}
                 className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:text-destructive hover:bg-destructive/5 hover:border-destructive/20 transition-all text-sm font-bold shadow-sm"
@@ -198,6 +207,10 @@ const MainLayout = () => {
              </div>
           </div>
         </div>
+      )}
+
+      {isProfileModalOpen && (
+        <ProfileModal onClose={() => setIsProfileModalOpen(false)} />
       )}
     </div>
   );

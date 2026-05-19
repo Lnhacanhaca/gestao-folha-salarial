@@ -497,16 +497,20 @@ const RelatoriosPage = () => {
                 </table>
               </div>
 
-              {cursoId === 1 && (
-                <div className="mt-4 flex justify-end">
-                  <div className="border-2 border-black p-2 bg-gray-50 text-right min-w-[280px]">
+              <div className="mt-4 flex flex-col sm:flex-row justify-between items-start gap-4 w-full">
+                <div className="text-[10px] text-black font-bold text-left pt-2">
+                  <p>AP - Aulas Programadas;</p>
+                  <p>AD - Aulas Dadas;</p>
+                </div>
+                {cursoId === 1 && (
+                  <div className="border-2 border-black p-2 bg-gray-50 text-right min-w-[280px] self-end sm:self-start">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-black block">Total Geral do Mês:</span>
                     <span className="text-sm font-black text-black block mt-0.5">
                       {formatarValor(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500)}
                     </span>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </>
           )}
 

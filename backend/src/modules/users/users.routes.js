@@ -5,6 +5,8 @@ const { authenticateJWT, authorizeRoles } = require('../../shared/middlewares/au
 
 router.use(authenticateJWT);
 
+router.put('/profile', userController.updateProfile);
+
 router.get('/', authorizeRoles('ADMIN'), userController.getAll);
 router.post('/', authorizeRoles('ADMIN'), userController.create);
 router.put('/:id', authorizeRoles('ADMIN'), userController.update);

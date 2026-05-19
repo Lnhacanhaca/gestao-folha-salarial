@@ -4,8 +4,14 @@ import { Plus, Search, Edit2, Trash2, UserPlus, Loader2, Upload, Download } from
 import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import Papa from 'papaparse';
+import { useAuth } from '../context/AuthContext';
+import { getManagedCourseIds } from '../lib/cursos';
 
 const DocentesPage = () => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
+  const managedIds = getManagedCourseIds(user);
+
   const [search, setSearch] = useState('');
   const [filterCurso, setFilterCurso] = useState('all');
   const [filterSemestre, setFilterSemestre] = useState('all');
@@ -183,12 +189,18 @@ const DocentesPage = () => {
   };
 
   const filteredDocentes = docentes?.filter(d => {
+    const cursosArray = parseCursos(d.cursos);
+
+    // Filter by managed courses if not admin
+    if (!isAdmin) {
+      const hasManagedCourse = cursosArray.some(c => managedIds.includes(c.id));
+      if (!hasManagedCourse) return false;
+    }
+
     // 1. Filter by search name
     if (search && !d.nome?.toLowerCase().includes(search.toLowerCase())) {
       return false;
     }
-
-    const cursosArray = parseCursos(d.cursos);
 
     // 2. Filter by course
     if (filterCurso !== 'all') {
@@ -367,11 +379,13 @@ const DocentesPage = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
-          <label className={`w-full sm:w-auto justify-center bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg cursor-pointer transition-all flex items-center gap-2 font-bold shadow-sm ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
-            {importing ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
-            Importar CSV
-            <input type="file" accept=".csv" onChange={handleCSVImport} className="hidden" disabled={importing} />
-          </label>
+          {isAdmin && (
+            <label className={`w-full sm:w-auto justify-center bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg cursor-pointer transition-all flex items-center gap-2 font-bold shadow-sm ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+              {importing ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
+              Importar CSV
+              <input type="file" accept=".csv" onChange={handleCSVImport} className="hidden" disabled={importing} />
+            </label>
+          )}
 
           <button 
             onClick={handleCSVExport}
@@ -381,15 +395,17 @@ const DocentesPage = () => {
             Exportar CSV
           </button>
 
-          <button 
-            onClick={() => openModal()}
-            className="w-full sm:w-auto justify-center bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20"
-          >
-            <UserPlus size={20} />
-            Novo Docente
-          </button>
+          {isAdmin && (
+            <button 
+              onClick={() => openModal()}
+              className="w-full sm:w-auto justify-center bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20"
+            >
+              <UserPlus size={20} />
+              Novo Docente
+            </button>
+          )}
 
-          {docentes && docentes.length > 0 && (
+          {isAdmin && docentes && docentes.length > 0 && (
             <button 
               onClick={handleClearAll}
               className="w-full sm:w-auto justify-center bg-destructive hover:bg-destructive/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-destructive/20"
@@ -449,7 +465,7 @@ const DocentesPage = () => {
                 className="w-full bg-secondary/50 border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-medium cursor-pointer"
               >
                 <option value="all">Todos os Cursos</option>
-                {CURSOS_OPCOES.filter(c => c.id !== 1).map(c => (
+                {CURSOS_OPCOES.filter(c => c.id !== 1 && (isAdmin || managedIds.includes(c.id))).map(c => (
                   <option key={c.id} value={c.id}>{c.nome}</option>
                 ))}
               </select>
@@ -527,20 +543,28 @@ const DocentesPage = () => {
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button 
-                          onClick={() => openModal(d)}
-                          className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(d.id)}
-                          className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
+                      {isAdmin ? (
+                        <div className="flex items-center justify-center gap-2">
+                          <button 
+                            onClick={() => openModal(d)}
+                            className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(d.id)}
+                            className="p-2 hover:bg-destructive/10 text-destructive rounded-lg transition-colors"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center">
+                          <span className="text-[10px] uppercase font-bold text-muted-foreground bg-secondary/50 px-2 py-1 rounded-md">
+                            Apenas Leitura
+                          </span>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 );
