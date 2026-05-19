@@ -41,7 +41,7 @@ const getWeeksDateRanges = (mes, ano) => {
   return ranges;
 };
 
-const ImportarPage = () => {
+const LancarNotasPage = () => {
   const { user } = useAuth();
   const [mes, setMes] = useState(() => parseInt(localStorage.getItem('sgfs_mes')) || new Date().getMonth() + 1);
   const [ano, setAno] = useState(() => parseInt(localStorage.getItem('sgfs_ano')) || new Date().getFullYear());
@@ -669,4 +669,4 @@ const ImportarPage = () => {
   );
 };
 
-export default ImportarPage;
+export default LancarNotasPage;

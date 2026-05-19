@@ -66,26 +66,59 @@ const Dashboard = () => {
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
+  const getManagedCourseIds = (u) => {
+    if (!u || u.role === 'ADMIN') {
+      return [2, 3, 4, 5, 6];
+    }
+    const cid = parseInt(u.curso_id);
+    if (cid === 2 || cid === 3) return [2, 3];
+    if (cid === 4 || cid === 5) return [4, 5];
+    if (cid === 6) return [6];
+    return [cid];
+  };
+
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
+      const managedIds = getManagedCourseIds(user);
+
       // 1. Fetch Docentes
       const { data: docentes } = await api.get('/docentes');
       
-      // 2. Fetch General Month Sheet to compute total AD and valor
-      const { data: generalSheet } = await api.get(`/folhas/geral?mes=${activeMonth}&ano=${activeYear}`);
+      const filteredDocentes = docentes.filter(doc => {
+        try {
+          let cursosArray = [];
+          if (typeof doc.cursos === 'string') {
+            cursosArray = JSON.parse(doc.cursos);
+          } else if (Array.isArray(doc.cursos)) {
+            cursosArray = doc.cursos;
+          }
+          return cursosArray.some(c => managedIds.includes(parseInt(c.id || c)));
+        } catch (e) {
+          return false;
+        }
+      });
+
+      // 2. Fetch specific course sheets in parallel to compute total AD and valor
+      const sheetsPromises = managedIds.map(cid => 
+        api.get(`/folhas/curso/${cid}?mes=${activeMonth}&ano=${activeYear}`)
+      );
+      const sheetsResponses = await Promise.all(sheetsPromises);
       
-      // Calculate totals from sheet
       let totalAd = 0;
       let totalVal = 0;
-      generalSheet.forEach(row => {
-        totalAd += row.total_ad || 0;
-        totalVal += row.valor_receber || 0;
+      
+      sheetsResponses.forEach(res => {
+        const sheet = res.data || [];
+        sheet.forEach(row => {
+          totalAd += row.total_ad || 0;
+          totalVal += row.valor_receber || 0;
+        });
       });
 
       // Compute statistics by Course
-      // We check how many teachers belong to each course & sum their AP
-      const courseStats = {
+      const courseStats = {};
+      const allCourseStats = {
         2: { id: 2, name: 'Contabilidade e Auditoria', teachers: 0, ap: 0, saved: false },
         3: { id: 3, name: 'Contabilidade e Administração Pública', teachers: 0, ap: 0, saved: false },
         4: { id: 4, name: 'Engenharia de Minas', teachers: 0, ap: 0, saved: false },
@@ -93,7 +126,13 @@ const Dashboard = () => {
         6: { id: 6, name: 'Engenharia Informática', teachers: 0, ap: 0, saved: false }
       };
 
-      docentes.forEach(doc => {
+      managedIds.forEach(cid => {
+        if (allCourseStats[cid]) {
+          courseStats[cid] = { ...allCourseStats[cid] };
+        }
+      });
+
+      filteredDocentes.forEach(doc => {
         try {
           let cursosArray = [];
           if (typeof doc.cursos === 'string') {
@@ -102,7 +141,7 @@ const Dashboard = () => {
             cursosArray = doc.cursos;
           }
           cursosArray.forEach(c => {
-            const cid = c.id || c;
+            const cid = parseInt(c.id || c);
             if (courseStats[cid]) {
               courseStats[cid].teachers += 1;
               courseStats[cid].ap += parseFloat(c.ap) || 0;
@@ -111,19 +150,19 @@ const Dashboard = () => {
         } catch(e){}
       });
 
-      // 3. Fetch course sheet statuses to check if saved
-      for (const cid of [2, 3, 4, 5, 6]) {
-        try {
-          const { data: courseSheet } = await api.get(`/folhas/curso/${cid}?mes=${activeMonth}&ano=${activeYear}`);
-          if (courseSheet && courseSheet.length > 0) {
+      // Update saved status
+      managedIds.forEach((cid, index) => {
+        const sheet = sheetsResponses[index].data || [];
+        if (sheet && sheet.length > 0) {
+          if (courseStats[cid]) {
             courseStats[cid].saved = true;
           }
-        } catch(e){}
-      }
+        }
+      });
 
       setStats({
-        totalDocentes: docentes.length,
-        totalCursos: 5,
+        totalDocentes: filteredDocentes.length,
+        totalCursos: managedIds.length,
         totalAdHours: totalAd,
         totalValor: totalVal,
         courseDetails: Object.values(courseStats)
@@ -137,7 +176,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchDashboardData();
-  }, [activeMonth, activeYear]);
+  }, [activeMonth, activeYear, user]);
 
   // Chart data formatting
   const chartData = stats.courseDetails.map(c => ({
@@ -273,7 +312,7 @@ const Dashboard = () => {
 
           <div className="pt-6 border-t mt-4">
             <Link 
-              to="/importar" 
+              to="/lancar-notas" 
               className="w-full py-3 bg-primary text-white text-xs font-bold rounded-2xl hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
             >
               Realizar Lançamentos de Horas

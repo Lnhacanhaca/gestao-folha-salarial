@@ -46,7 +46,7 @@ const MainLayout = () => {
   const menuItems = [
     { to: "/", icon: LayoutDashboard, label: "Dashboard" },
     { to: "/docentes", icon: Users, label: "Docentes" },
-    { to: "/importar", icon: FileUp, label: "Lançamento de Horas" },
+    { to: "/lancar-notas", icon: FileUp, label: "Lançamento de Horas" },
     { to: "/relatorios", icon: FileText, label: "Relatórios" },
   ];
 
@@ -63,7 +63,7 @@ const MainLayout = () => {
     switch (location.pathname) {
       case '/': return 'Dashboard';
       case '/docentes': return 'Docentes';
-      case '/importar': return 'Lançamento de Horas';
+      case '/lancar-notas': return 'Lançamento de Horas';
       case '/relatorios': return 'Relatórios';
       case '/usuarios': return 'Utilizadores';
       default: return 'Página';

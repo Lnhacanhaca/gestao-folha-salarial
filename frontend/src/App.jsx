@@ -6,7 +6,7 @@ import MainLayout from './layouts/MainLayout';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import DocentesPage from './pages/DocentesPage';
-import ImportarPage from './pages/ImportarPage';
+import LancarNotasPage from './pages/LancarNotasPage';
 import RelatoriosPage from './pages/RelatoriosPage';
 import UsuariosPage from './pages/UsuariosPage';
 
@@ -34,7 +34,7 @@ function AppRoutes() {
       }>
         <Route index element={<Dashboard />} />
         <Route path="docentes" element={<DocentesPage />} />
-        <Route path="importar" element={<ImportarPage />} />
+        <Route path="lancar-notas" element={<LancarNotasPage />} />
         <Route path="relatorios" element={<RelatoriosPage />} />
         <Route path="usuarios" element={
           <ProtectedRoute roles={['ADMIN']}>
