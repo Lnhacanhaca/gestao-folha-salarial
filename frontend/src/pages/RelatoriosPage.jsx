@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Printer, FileText, Loader2, ChevronRight } from 'lucide-react';
+import { Printer, FileText, Loader2 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { numeroPorExtenso } from '../lib/extenso';
@@ -42,6 +42,15 @@ const getWeeksDateRanges = (mes, ano) => {
   return ranges;
 };
 
+// Formats number to pt-MZ style: "38.000,00 Mt"
+const formatarValor = (valor) => {
+  if (valor === undefined || valor === null) return "0,00 Mt";
+  const num = parseFloat(valor).toFixed(2);
+  const [inteiro, decimal] = num.split('.');
+  const inteiroFormatado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return `${inteiroFormatado},${decimal} Mt`;
+};
+
 const RelatoriosPage = () => {
   const { user } = useAuth();
   const [mes, setMes] = useState(new Date().getMonth() + 1);
@@ -59,13 +68,6 @@ const RelatoriosPage = () => {
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
-
-  const cursos = {
-    1: "Geral (Consolidado)",
-    2: "Contabilidade e Auditoria e Contabilidade e Administração Pública",
-    3: "Engenharia de Minas e Engenharia de Processamento Mineral",
-    4: "Engenharia Informática"
-  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -106,11 +108,11 @@ const RelatoriosPage = () => {
           @media print {
             @page {
               size: ${viewMode === 'oficio' ? 'portrait' : 'landscape'};
-              margin: 0; /* Hides default browser header (date, title) and footer (URL) */
+              margin: 1.2cm 1.0cm;
             }
             body {
               margin: 0 !important;
-              padding: 1.8cm 1.5cm !important;
+              padding: 0 !important;
               background-color: white !important;
               -webkit-print-color-adjust: exact;
               print-color-adjust: exact;
@@ -121,12 +123,6 @@ const RelatoriosPage = () => {
             .print-no-break {
               page-break-inside: avoid;
               break-inside: avoid;
-            }
-            .print-shadow-none {
-              box-shadow: none !important;
-              border: none !important;
-              padding: 0 !important;
-              min-height: auto !important;
             }
           }
         `}
@@ -206,10 +202,10 @@ const RelatoriosPage = () => {
 
       {/* Ofício - Print Ready (Only for Geral) */}
       {cursoId === 1 && !loading && viewMode === 'oficio' && (
-        <div className="bg-white text-black p-8 border border-slate-200 min-h-[1000px] flex flex-col justify-between">
+        <div className="bg-white text-black p-8 min-h-[1000px] flex flex-col justify-between print:p-0">
           <div>
             <div className="text-center mb-8">
-              <img src="/emblema.png" alt="República de Moçambique" className="h-20 mx-auto mb-2 object-contain" />
+              <img src="/emblema.png" alt="República de Moçambique" className="h-24 mx-auto mb-2 object-contain" />
               <h2 className="font-bold uppercase text-xs sm:text-sm tracking-wider">República de Moçambique</h2>
               <div className="my-6">
                 <h2 className="text-sm sm:text-base font-bold uppercase tracking-wide">Instituto Superior Politécnico de Tete</h2>
@@ -231,7 +227,7 @@ const RelatoriosPage = () => {
                   1. Em anexo, se envia o mapa referente a aulas programadas e dadas pelos docentes e os respectivos valores a serem remunerados.
                 </p>
                 <p>
-                  2. É de referir que o valor total a ser remunerado aos docentes é de <span className="font-bold">{valorTotalMts.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} Mts</span> ({valorExtenso}).
+                  2. É de referir que o valor total a ser remunerado aos docentes é de <span className="font-bold">{formatarValor(valorTotalMts)}</span> ({valorExtenso}).
                 </p>
                 <p>
                   3. À consideração Superior.
@@ -264,10 +260,10 @@ const RelatoriosPage = () => {
 
       {/* Report Sheet - Print Ready */}
       {viewMode === 'folha' && (
-        <div className="bg-white text-black p-8 border border-slate-200 min-h-[1000px]">
+        <div className="bg-white text-black p-8 min-h-[1000px] print:p-0">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-2">
-              <img src="/logo.png" alt="Instituto Superior Politécnico de Tete" className="h-24 object-contain" />
+              <img src="/logo.png" alt="Instituto Superior Politécnico de Tete" className="h-16 object-contain" />
             </div>
             <h3 className="text-sm sm:text-base font-bold uppercase mt-2 leading-snug">
               {cursoId === 1 ? 'Direcção do Curso Nocturno' : 
@@ -286,7 +282,7 @@ const RelatoriosPage = () => {
               <p className="text-muted-foreground font-semibold">Processando dados...</p>
             </div>
           ) : (
-            <div className="overflow-x-auto w-full border border-slate-200 scrollbar-thin print:border-none">
+            <div className="overflow-x-auto w-full scrollbar-thin print:border-none print:overflow-visible print:w-full">
               <table className="w-full border-collapse text-[10px] text-center min-w-[950px] print:min-w-0">
                 <thead>
                   <tr className="bg-gray-200 border-2 border-black">
@@ -371,10 +367,10 @@ const RelatoriosPage = () => {
                         <td className="p-1.5 border-2 border-black font-extrabold">{row.total_ad}</td>
                         
                         <td className="p-1.5 border-2 border-black">
-                          {(row.total_ap * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                          {formatarValor(row.total_ap * 500)}
                         </td>
                         <td className="p-1.5 border-2 border-black font-extrabold">
-                          {(row.total_ad * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                          {formatarValor(row.total_ad * 500)}
                         </td>
                       </tr>
                     );
@@ -398,10 +394,10 @@ const RelatoriosPage = () => {
                     <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ad || 0), 0)}</td>
                     
                     <td className="p-1.5 border-2 border-black">
-                      {(dados.reduce((acc, r) => acc + (r.total_ap || 0), 0) * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                      {formatarValor(dados.reduce((acc, r) => acc + (r.total_ap || 0), 0) * 500)}
                     </td>
                     <td className="p-1.5 border-2 border-black">
-                      {(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                      {formatarValor(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500)}
                     </td>
                   </tr>
                 </tbody>
