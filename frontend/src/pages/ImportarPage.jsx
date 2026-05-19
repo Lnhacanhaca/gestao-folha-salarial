@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 const getWeeksDateRanges = (mes, ano) => {
   const ranges = [];
   const firstDayOfMonth = new Date(ano, mes - 1, 1);
+  const lastDayOfMonth = new Date(ano, mes, 0); // last day of current month
   let dayOfWeek = firstDayOfMonth.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
   
   // Determine Monday of the week containing the 1st
@@ -16,11 +17,21 @@ const getWeeksDateRanges = (mes, ano) => {
   startMonday.setDate(firstDayOfMonth.getDate() + diffToMonday);
   
   for (let w = 0; w < 5; w++) {
-    const mon = new Date(startMonday);
+    let mon = new Date(startMonday);
     mon.setDate(startMonday.getDate() + (w * 7));
     
-    const fri = new Date(mon);
+    let fri = new Date(mon);
     fri.setDate(mon.getDate() + 4);
+    
+    // Clamp Monday to the start of the month
+    if (mon < firstDayOfMonth) {
+      mon = new Date(firstDayOfMonth);
+    }
+    
+    // Clamp Friday to the end of the month
+    if (fri > lastDayOfMonth) {
+      fri = new Date(lastDayOfMonth);
+    }
     
     const monStr = String(mon.getDate()).padStart(2, '0') + '/' + String(mon.getMonth() + 1).padStart(2, '0');
     const friStr = String(fri.getDate()).padStart(2, '0') + '/' + String(fri.getMonth() + 1).padStart(2, '0') + '/' + fri.getFullYear();
