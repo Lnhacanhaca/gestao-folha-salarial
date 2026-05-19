@@ -216,7 +216,7 @@ const RelatoriosPage = () => {
 
       {/* Ofício - Print Ready (Only for Geral) */}
       {cursoId === 1 && !loading && viewMode === 'oficio' && (
-        <div className="bg-white text-black p-8 min-h-[1000px] flex flex-col justify-between print:p-0">
+        <div className="bg-white text-black p-8 border-0 shadow-none min-h-[1000px] flex flex-col justify-between print:p-0 print:border-0 print:shadow-none">
           <div>
             <div className="text-center mb-8">
               <img src="/emblema.png" alt="República de Moçambique" className="h-24 mx-auto mb-2 object-contain" />
@@ -274,7 +274,7 @@ const RelatoriosPage = () => {
 
       {/* Report Sheet - Print Ready */}
       {viewMode === 'folha' && (
-        <div className="bg-white text-black p-8 min-h-[1000px] print:p-0">
+        <div className="bg-white text-black p-8 border-0 shadow-none min-h-[1000px] print:p-0 print:border-0 print:shadow-none">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-2">
               <img src="/logo.png" alt="Instituto Superior Politécnico de Tete" className="h-16 object-contain" />
