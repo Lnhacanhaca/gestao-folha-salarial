@@ -146,6 +146,30 @@ const LancarNotasPage = () => {
     setDados(newDados);
   };
 
+  const handleSaveDocente = async (index) => {
+    if (isReadOnly) return;
+    const doc = dados[index];
+    if (!doc.docente_nome.trim()) {
+      toast.error('Erro: O nome do docente não pode estar vazio.');
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post('/folhas/importar', {
+        mes,
+        ano,
+        curso_id: cursoId,
+        dados: [doc]
+      });
+      setLastSaved(new Date());
+      toast.success(`Dados do docente "${doc.docente_nome}" salvos com sucesso!`);
+    } catch (err) {
+      toast.error('Erro ao salvar docente: ' + (err.response?.data?.error?.message || err.message));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSave = async () => {
     if (isReadOnly) return;
     setLoading(true);
@@ -485,6 +509,15 @@ const LancarNotasPage = () => {
                       </span>
                     )}
                     <button
+                      onClick={() => handleSaveDocente(activeDocenteIndex)}
+                      disabled={loading || isReadOnly}
+                      className="bg-primary/10 hover:bg-primary/20 text-primary px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 text-xs font-bold disabled:opacity-50"
+                      title="Gravar este docente"
+                    >
+                      <Save size={14} />
+                      <span>Gravar Docente</span>
+                    </button>
+                    <button
                       onClick={() => removeDocente(activeDocenteIndex)}
                       disabled={isReadOnly}
                       className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30"
@@ -585,7 +618,7 @@ const LancarNotasPage = () => {
                   <th className="p-4 font-bold text-sm text-center border-l bg-primary/5" colSpan={2}>
                     Total Mensal
                   </th>
-                  <th className="p-4 w-16"></th>
+                  <th className="p-4 w-24 text-center">Ações</th>
                 </tr>
                 <tr className="bg-secondary/30 border-b text-xs uppercase tracking-wider text-muted-foreground">
                   <th className="p-2">Nome</th>
@@ -597,7 +630,7 @@ const LancarNotasPage = () => {
                   ))}
                   <th className="p-2 text-center border-l bg-primary/5">AP</th>
                   <th className="p-2 text-center bg-primary/5">AD</th>
-                  <th></th>
+                  <th className="p-2 text-center"></th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -608,9 +641,9 @@ const LancarNotasPage = () => {
                         type="text" 
                         value={doc.docente_nome} 
                         onChange={(e) => {
-                          const n = [...dados];
-                          n[dIdx].docente_nome = e.target.value;
-                          setDados(n);
+                           const n = [...dados];
+                           n[dIdx].docente_nome = e.target.value;
+                           setDados(n);
                         }}
                         disabled={isReadOnly}
                         placeholder="Nome do Docente"
@@ -650,11 +683,20 @@ const LancarNotasPage = () => {
                     <td className="p-2 bg-primary/5 text-center font-bold text-primary">
                       {calculateTotal(doc.semanas, 'ad')}
                     </td>
-                    <td className="p-2 text-center">
+                    <td className="p-2 text-center flex items-center justify-center gap-1">
+                      <button 
+                        onClick={() => handleSaveDocente(dIdx)}
+                        disabled={loading || isReadOnly}
+                        className="text-primary hover:bg-primary/10 p-2 rounded-lg transition-colors disabled:opacity-30"
+                        title="Gravar este docente"
+                      >
+                        <Save size={16} />
+                      </button>
                       <button 
                         onClick={() => removeDocente(dIdx)}
                         disabled={isReadOnly}
                         className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                        title="Remover Docente"
                       >
                         <Trash2 size={16} />
                       </button>
