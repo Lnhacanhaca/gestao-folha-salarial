@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { UserPlus, Shield, User, Loader2, Edit2, Trash2, X, Save, Key, BookOpen } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import { CURSO_NOME, CURSOS_GERIDOS_LABEL } from '../lib/cursos';
 
@@ -30,10 +31,10 @@ const UsuariosPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       closeModal();
-      alert('Utilizador criado com sucesso!');
+      toast.success('Utilizador criado com sucesso!');
     },
     onError: (err) => {
-      alert('Erro ao criar utilizador: ' + (err.response?.data?.error?.message || err.message));
+      toast.error('Erro ao criar utilizador: ' + (err.response?.data?.error?.message || err.message));
     }
   });
 
@@ -43,10 +44,10 @@ const UsuariosPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       closeModal();
-      alert('Utilizador atualizado com sucesso!');
+      toast.success('Utilizador atualizado com sucesso!');
     },
     onError: (err) => {
-      alert('Erro ao atualizar utilizador: ' + (err.response?.data?.error?.message || err.message));
+      toast.error('Erro ao atualizar utilizador: ' + (err.response?.data?.error?.message || err.message));
     }
   });
 
@@ -55,10 +56,10 @@ const UsuariosPage = () => {
     mutationFn: (id) => api.delete(`/users/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      alert('Utilizador removido com sucesso!');
+      toast.success('Utilizador removido com sucesso!');
     },
     onError: (err) => {
-      alert('Erro ao remover utilizador: ' + (err.response?.data?.error?.message || err.message));
+      toast.error('Erro ao remover utilizador: ' + (err.response?.data?.error?.message || err.message));
     }
   });
 
@@ -91,12 +92,12 @@ const UsuariosPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.username.trim()) {
-      alert('Por favor introduza o nome de utilizador.');
+      toast.error('Por favor introduza o nome de utilizador.');
       return;
     }
 
     if (!editingUser && !formData.password) {
-      alert('Por favor introduza uma palavra-passe.');
+      toast.error('Por favor introduza uma palavra-passe.');
       return;
     }
 
@@ -108,7 +109,7 @@ const UsuariosPage = () => {
     
     // Validate role is a valid enum value
     if (!['ADMIN', 'DIRETOR_CURSO'].includes(payload.role)) {
-      alert('Função inválida. Por favor selecione uma opção válida.');
+      toast.error('Função inválida. Por favor selecione uma opção válida.');
       return;
     }
 
@@ -124,9 +125,18 @@ const UsuariosPage = () => {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm('Tem certeza que deseja remover este utilizador? Esta ação não pode ser desfeita.')) {
-      deleteMutation.mutate(id);
-    }
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="font-medium">Tem certeza que deseja remover este utilizador? Esta ação não pode ser desfeita.</p>
+        <div className="flex justify-end gap-2 mt-2">
+          <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1.5 text-xs font-bold bg-secondary hover:bg-secondary/80 rounded-lg transition-colors border">Cancelar</button>
+          <button onClick={() => {
+            toast.dismiss(t.id);
+            deleteMutation.mutate(id);
+          }} className="px-3 py-1.5 text-xs font-bold bg-destructive hover:bg-destructive/90 text-white rounded-lg transition-colors shadow-sm">Sim, remover</button>
+        </div>
+      </div>
+    ), { duration: Infinity, style: { minWidth: '300px' } });
   };
 
 

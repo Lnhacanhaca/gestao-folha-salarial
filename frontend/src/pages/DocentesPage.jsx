@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Search, Edit2, Trash2, UserPlus, Loader2, Upload } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import Papa from 'papaparse';
 
@@ -23,7 +24,7 @@ const DocentesPage = () => {
       skipEmptyLines: true,
       complete: async (results) => {
         if (results.data.length === 0) {
-          alert('O ficheiro CSV está vazio ou inválido.');
+          toast.error('O ficheiro CSV está vazio ou inválido.');
           setImporting(false);
           return;
         }
@@ -92,17 +93,17 @@ const DocentesPage = () => {
           });
 
           await Promise.all(promises.filter(Boolean));
-          alert('Docentes importados com sucesso!');
+          toast.success('Docentes importados com sucesso!');
           queryClient.invalidateQueries(['docentes']);
         } catch (err) {
-          alert('Erro ao importar docentes: ' + err.message);
+          toast.error('Erro ao importar docentes: ' + err.message);
         } finally {
           setImporting(false);
           e.target.value = null;
         }
       },
       error: (err) => {
-        alert('Erro ao ler ficheiro CSV: ' + err.message);
+        toast.error('Erro ao ler ficheiro CSV: ' + err.message);
         setImporting(false);
       }
     });
@@ -130,7 +131,9 @@ const DocentesPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['docentes']);
       closeModal();
-    }
+      toast.success('Docente cadastrado com sucesso!');
+    },
+    onError: (err) => toast.error('Erro ao cadastrar docente: ' + (err.response?.data?.error?.message || err.message))
   });
 
   const updateMutation = useMutation({
@@ -138,27 +141,42 @@ const DocentesPage = () => {
     onSuccess: () => {
       queryClient.invalidateQueries(['docentes']);
       closeModal();
-    }
+      toast.success('Docente atualizado com sucesso!');
+    },
+    onError: (err) => toast.error('Erro ao atualizar docente: ' + (err.response?.data?.error?.message || err.message))
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => api.delete(`/docentes/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries(['docentes']);
-    }
+      toast.success('Docente removido com sucesso!');
+    },
+    onError: (err) => toast.error('Erro ao remover docente: ' + (err.response?.data?.error?.message || err.message))
   });
 
   const clearMutation = useMutation({
     mutationFn: () => api.delete('/docentes/bulk/clear'),
     onSuccess: () => {
       queryClient.invalidateQueries(['docentes']);
-    }
+      toast.success('Todos os docentes foram eliminados.');
+    },
+    onError: (err) => toast.error('Erro ao limpar docentes: ' + (err.response?.data?.error?.message || err.message))
   });
 
   const handleClearAll = () => {
-    if (window.confirm('ATENÇÃO: Tem certeza que deseja eliminar TODOS os docentes cadastrados? Esta ação não pode ser desfeita.')) {
-      clearMutation.mutate();
-    }
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="font-medium text-destructive">ATENÇÃO: Tem certeza que deseja eliminar TODOS os docentes cadastrados? Esta ação não pode ser desfeita.</p>
+        <div className="flex justify-end gap-2 mt-2">
+          <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1.5 text-xs font-bold bg-secondary hover:bg-secondary/80 rounded-lg transition-colors border">Cancelar</button>
+          <button onClick={() => {
+            toast.dismiss(t.id);
+            clearMutation.mutate();
+          }} className="px-3 py-1.5 text-xs font-bold bg-destructive hover:bg-destructive/90 text-white rounded-lg transition-colors shadow-sm">Sim, eliminar todos</button>
+        </div>
+      </div>
+    ), { duration: Infinity, style: { minWidth: '350px' } });
   };
 
   const filteredDocentes = docentes?.filter(d => 
@@ -213,7 +231,7 @@ const DocentesPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (formData.cursos.length === 0) {
-      alert("Selecione pelo menos um curso.");
+      toast.error("Selecione pelo menos um curso.");
       return;
     }
     if (editingDocente) {
@@ -224,9 +242,18 @@ const DocentesPage = () => {
   };
 
   const handleDelete = (id) => {
-    if (window.confirm('Tem certeza que deseja remover este docente?')) {
-      deleteMutation.mutate(id);
-    }
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="font-medium">Tem certeza que deseja remover este docente?</p>
+        <div className="flex justify-end gap-2 mt-2">
+          <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1.5 text-xs font-bold bg-secondary hover:bg-secondary/80 rounded-lg transition-colors border">Cancelar</button>
+          <button onClick={() => {
+            toast.dismiss(t.id);
+            deleteMutation.mutate(id);
+          }} className="px-3 py-1.5 text-xs font-bold bg-destructive hover:bg-destructive/90 text-white rounded-lg transition-colors shadow-sm">Sim, remover</button>
+        </div>
+      </div>
+    ), { duration: Infinity, style: { minWidth: '300px' } });
   };
 
   const handleCursoToggle = (cursoId, semestre) => {

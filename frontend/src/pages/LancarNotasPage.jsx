@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, Loader2, UserPlus } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getManagedCourseIds, LANCAR_COURSE_OPTIONS } from '../lib/cursos';
@@ -133,7 +134,7 @@ const LancarNotasPage = () => {
     const newDados = [...dados];
     
     if (field === 'ad' && val > newDados[docIndex].semanas[weekIndex].ap) {
-      alert('Erro: Aulas Dadas (AD) não podem ser maiores que Programadas (AP)');
+      toast.error('Erro: Aulas Dadas (AD) não podem ser maiores que Programadas (AP)');
       return;
     }
 
@@ -156,9 +157,9 @@ const LancarNotasPage = () => {
         dados
       });
       setLastSaved(new Date());
-      alert('Dados salvos com sucesso!');
+      toast.success('Dados salvos com sucesso!');
     } catch (err) {
-      alert('Erro ao salvar dados: ' + (err.response?.data?.error?.message || err.message));
+      toast.error('Erro ao salvar dados: ' + (err.response?.data?.error?.message || err.message));
     } finally {
       setLoading(false);
     }
@@ -332,9 +333,18 @@ const LancarNotasPage = () => {
           )}
           <button 
             onClick={() => {
-              if(window.confirm('Tem certeza que deseja limpar todos os dados actuais?')) {
-                setDados([]);
-              }
+              toast((t) => (
+                <div className="flex flex-col gap-3">
+                  <p className="font-medium text-destructive">Tem certeza que deseja limpar todos os dados actuais?</p>
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1.5 text-xs font-bold bg-secondary hover:bg-secondary/80 rounded-lg transition-colors border">Cancelar</button>
+                    <button onClick={() => {
+                      toast.dismiss(t.id);
+                      setDados([]);
+                    }} className="px-3 py-1.5 text-xs font-bold bg-destructive hover:bg-destructive/90 text-white rounded-lg transition-colors shadow-sm">Sim, limpar</button>
+                  </div>
+                </div>
+              ), { duration: Infinity, style: { minWidth: '350px' } });
             }}
             disabled={dados.length === 0 || isReadOnly}
             className="bg-destructive/10 hover:bg-destructive/20 text-destructive px-4 py-2 rounded-lg transition-colors flex items-center gap-2 font-medium disabled:opacity-50"
