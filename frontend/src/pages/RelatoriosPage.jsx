@@ -206,7 +206,7 @@ const RelatoriosPage = () => {
 
       {/* Ofício - Print Ready (Only for Geral) */}
       {cursoId === 1 && !loading && viewMode === 'oficio' && (
-        <div className="bg-white text-black p-8 rounded-2xl border shadow-sm print-shadow-none mb-6 min-h-[1000px] flex flex-col justify-between">
+        <div className="bg-white text-black p-8 border border-slate-200 min-h-[1000px] flex flex-col justify-between">
           <div>
             <div className="text-center mb-8">
               <img src="/emblema.png" alt="República de Moçambique" className="h-20 mx-auto mb-2 object-contain" />
@@ -264,7 +264,7 @@ const RelatoriosPage = () => {
 
       {/* Report Sheet - Print Ready */}
       {viewMode === 'folha' && (
-        <div className="bg-white text-black p-8 rounded-2xl border shadow-sm min-h-[1000px] print-shadow-none">
+        <div className="bg-white text-black p-8 border border-slate-200 min-h-[1000px]">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-2">
               <img src="/logo.png" alt="Instituto Superior Politécnico de Tete" className="h-24 object-contain" />
@@ -286,7 +286,7 @@ const RelatoriosPage = () => {
               <p className="text-muted-foreground font-semibold">Processando dados...</p>
             </div>
           ) : (
-            <div className="overflow-x-auto w-full border rounded-2xl shadow-inner scrollbar-thin print:border-none print:shadow-none">
+            <div className="overflow-x-auto w-full border border-slate-200 scrollbar-thin print:border-none">
               <table className="w-full border-collapse text-[10px] text-center min-w-[950px] print:min-w-0">
                 <thead>
                   <tr className="bg-gray-200 border-2 border-black">
