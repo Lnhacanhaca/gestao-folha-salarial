@@ -10,7 +10,7 @@ const UsuariosPage = () => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    role: 'USER',
+    role: 'DIRETOR_CURSO',
     curso_id: 2
   });
 
@@ -75,7 +75,7 @@ const UsuariosPage = () => {
       setFormData({
         username: '',
         password: '',
-        role: 'USER',
+        role: 'DIRETOR_CURSO',
         curso_id: 2
       });
     }
@@ -251,12 +251,12 @@ const UsuariosPage = () => {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                   className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 font-medium"
                 >
-                  <option value="USER">Director de Curso</option>
+                  <option value="DIRETOR_CURSO">Director de Curso</option>
                   <option value="ADMIN">Administrador Geral</option>
                 </select>
               </div>
 
-              {formData.role === 'USER' && (
+              {formData.role === 'DIRETOR_CURSO' && (
                 <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
                   <label className="text-sm font-medium">Curso Vinculado</label>
                   <select 
