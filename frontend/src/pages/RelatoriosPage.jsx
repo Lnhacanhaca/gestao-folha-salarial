@@ -105,6 +105,14 @@ const RelatoriosPage = () => {
     <div className="space-y-6">
       <style>
         {`
+          @media screen {
+            body,
+            .min-h-screen,
+            main,
+            .bg-\\[\\#f8fafc\\] {
+              background-color: white !important;
+            }
+          }
           @media print {
             @page {
               size: ${viewMode === 'oficio' ? 'A4 portrait' : 'A4 landscape'};
