@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { getManagedCourseIds, LANCAR_COURSE_OPTIONS } from '../lib/cursos';
+import { getHolidaysForMonth } from '../lib/holidays';
 
 const getWeeksDateRanges = (mes, ano) => {
   const ranges = [];
@@ -416,6 +417,8 @@ const LancarNotasPage = () => {
   const weekRanges = getWeeksDateRanges(mes, ano);
   const activeDocenteIndex = Math.min(selectedDocenteIndex, Math.max(0, dados.length - 1));
   const selectedDocente = dados[activeDocenteIndex];
+  
+  const holidaysInMonth = getHolidaysForMonth(mes);
 
   return (
     <div className="space-y-6">
@@ -538,6 +541,20 @@ const LancarNotasPage = () => {
             <p className="font-bold">Vista Consolidada (Apenas Leitura)</p>
             <p className="text-xs text-amber-700 mt-0.5 leading-normal">
               O lançamento geral consolidado apresenta o somatório de horas de todos os cursos e não permite edições diretas para evitar duplicidade de dados. Para alterar, preencher ou remover horas de um docente, por favor selecione o seu curso específico no menu acima.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {holidaysInMonth.length > 0 && (
+        <div className="bg-sky-50 border border-sky-200 text-sky-800 p-4 rounded-xl text-sm font-medium flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-300">
+          <span className="text-base">📅</span>
+          <div>
+            <p className="font-bold">Feriado(s) em {meses[mes - 1]}</p>
+            <p className="text-xs text-sky-700 mt-0.5 leading-normal">
+              Atenção: Este mês contém os seguintes feriados: 
+              <span className="font-bold">{holidaysInMonth.map(h => ` ${h.day} (${h.name})`).join(', ')}</span>. 
+              Lembre-se de descontar as Aulas Programadas (AP) se aplicável.
             </p>
           </div>
         </div>

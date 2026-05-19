@@ -445,4 +445,46 @@ const deletarDocenteFolha = async (req, res, next) => {
   }
 };
 
-module.exports = { importar, getByCurso, getGeral, deletarDocenteFolha };
+const getAnalytics = async (req, res, next) => {
+  try {
+    const { ano } = req.query;
+    const year = Number(ano) || new Date().getFullYear();
+
+    const folhas = await db('folhas').where({ ano: year });
+
+    const evolutionByMonth = Array.from({ length: 12 }, (_, i) => ({
+      mes: i + 1,
+      total_ap: 0,
+      total_ad: 0,
+      custo_total: 0
+    }));
+
+    const courseStats = {};
+
+    folhas.forEach(f => {
+      const monthIndex = f.mes - 1;
+      if (monthIndex >= 0 && monthIndex < 12) {
+        evolutionByMonth[monthIndex].total_ap += f.total_ap || 0;
+        evolutionByMonth[monthIndex].total_ad += f.total_ad || 0;
+        evolutionByMonth[monthIndex].custo_total += f.valor_receber || 0;
+      }
+
+      if (!courseStats[f.curso_id]) {
+        courseStats[f.curso_id] = { curso_id: f.curso_id, custo_total: 0 };
+      }
+      courseStats[f.curso_id].custo_total += f.valor_receber || 0;
+    });
+
+    const ranking = Object.values(courseStats).sort((a, b) => b.custo_total - a.custo_total);
+
+    res.json({
+      ano: year,
+      evolution: evolutionByMonth,
+      ranking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { importar, getByCurso, getGeral, deletarDocenteFolha, getAnalytics };

@@ -7,6 +7,7 @@ router.use(authenticateJWT);
 
 router.post('/importar', folhaController.importar);
 router.post('/deletar-docente', folhaController.deletarDocenteFolha);
+router.get('/analytics', folhaController.getAnalytics);
 router.get('/curso/:id', folhaController.getByCurso);
 router.get('/geral', folhaController.getGeral);
 

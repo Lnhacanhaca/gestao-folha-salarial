@@ -46,6 +46,10 @@ class App {
     // Audit Module
     const auditRoutes = require('./modules/audit/audit.routes');
     this.app.use('/api/audit', auditRoutes);
+
+    // Avisos Module
+    const avisosRoutes = require('./modules/avisos/avisos.routes');
+    this.app.use('/api/avisos', avisosRoutes);
   }
 
   setupErrorHandling() {

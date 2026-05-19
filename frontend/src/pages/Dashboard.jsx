@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   BarChart, 
   Bar, 
+  LineChart,
+  Line,
   XAxis, 
   YAxis, 
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Legend,
-  Cell
+  Legend
 } from 'recharts';
 import { 
   Users, 
@@ -18,14 +19,18 @@ import {
   CheckCircle2, 
   AlertCircle, 
   TrendingUp, 
-  Shield, 
   ChevronRight,
-  Loader2
+  Loader2,
+  Megaphone,
+  Settings,
+  Trophy
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { getManagedCourseIds, CURSO_NOME } from '../lib/cursos';
+import { getHolidaysForMonth } from '../lib/holidays';
+import AvisosModal from '../components/AvisosModal';
 
 const StatCard = ({ title, value, icon: Icon, description, trend, colorClass }) => (
   <div className="bg-card p-6 rounded-3xl border shadow-sm flex items-center justify-between hover:shadow-md transition-shadow relative overflow-hidden group">
@@ -51,6 +56,8 @@ const StatCard = ({ title, value, icon: Icon, description, trend, colorClass }) 
 const Dashboard = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  
+  // States
   const [stats, setStats] = useState({
     totalDocentes: 0,
     totalCursos: 5,
@@ -58,20 +65,32 @@ const Dashboard = () => {
     totalValor: 0,
     courseDetails: []
   });
+  const [avisos, setAvisos] = useState([]);
+  const [isAvisosModalOpen, setIsAvisosModalOpen] = useState(false);
+  const [analytics, setAnalytics] = useState(null);
 
   const [activeMonth] = useState(() => new Date().getMonth() + 1);
   const [activeYear] = useState(() => new Date().getFullYear());
 
   const meses = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+    "Jul", "Ago", "Set", "Out", "Nov", "Dez"
   ];
-
 
   const fetchDashboardData = async () => {
     try {
       setLoading(true);
       const managedIds = getManagedCourseIds(user);
+
+      // Fetch Avisos
+      const { data: avisosData } = await api.get('/avisos');
+      setAvisos(avisosData || []);
+
+      // Fetch Analytics (Admin only)
+      if (user?.role === 'ADMIN') {
+        const { data: analyticsData } = await api.get(`/folhas/analytics?ano=${activeYear}`);
+        setAnalytics(analyticsData);
+      }
 
       // 1. Fetch Docentes
       const { data: docentes } = await api.get('/docentes');
@@ -90,7 +109,7 @@ const Dashboard = () => {
         }
       });
 
-      // 2. Fetch specific course sheets in parallel to compute total AD and valor
+      // 2. Fetch specific course sheets
       const sheetsPromises = managedIds.map(cid => 
         api.get(`/folhas/curso/${cid}?mes=${activeMonth}&ano=${activeYear}`)
       );
@@ -169,14 +188,20 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [activeMonth, activeYear, user]);
 
-  // Chart data formatting
+  // Basic chart formatting
   const chartData = stats.courseDetails.map(c => ({
     name: c.id === 2 ? 'CA' : c.id === 3 ? 'CAP' : c.id === 4 ? 'Minas' : c.id === 5 ? 'Processam.' : 'Informática',
     'Docentes': c.teachers,
     'Horas Programadas (AP)': c.ap
   }));
 
-  const COLORS = ['#1e88e5', '#745af2', '#00acc1', '#f59e0b', '#10b981'];
+  // Analytics formatting
+  const analyticsEvolution = analytics?.evolution.map(e => ({
+    name: meses[e.mes - 1],
+    'Aulas Programadas (AP)': e.total_ap,
+    'Aulas Dadas (AD)': e.total_ad,
+    'Custo (Meticais)': e.custo_total
+  })) || [];
 
   if (loading) {
     return (
@@ -187,8 +212,50 @@ const Dashboard = () => {
     );
   }
 
+  const holidaysInMonth = getHolidaysForMonth(activeMonth);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
+      
+      {/* Quadro de Avisos */}
+      {((avisos && avisos.length > 0) || user?.role === 'ADMIN') && (
+        <div className="bg-indigo-50 border border-indigo-200 rounded-3xl p-6 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+            <Megaphone size={120} />
+          </div>
+          <div className="flex items-start justify-between gap-4 relative z-10">
+            <div className="space-y-4 w-full">
+              <h3 className="font-black text-indigo-900 text-lg flex items-center gap-2">
+                <Megaphone size={20} className="text-indigo-600" />
+                Quadro de Avisos da Direção
+              </h3>
+              
+              {avisos.length === 0 ? (
+                <p className="text-sm text-indigo-700/60 font-medium italic">Nenhum aviso ativo no momento.</p>
+              ) : (
+                <div className="space-y-2">
+                  {avisos.map(aviso => (
+                    <div key={aviso.id} className="bg-white/60 p-3 rounded-xl border border-indigo-100 text-sm text-indigo-950 font-medium">
+                      {aviso.mensagem}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            
+            {user?.role === 'ADMIN' && (
+              <button 
+                onClick={() => setIsAvisosModalOpen(true)}
+                className="bg-white text-indigo-700 hover:bg-indigo-100 px-4 py-2 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-2 shrink-0 border border-indigo-200"
+              >
+                <Settings size={14} />
+                Gerir Avisos
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Intro Header */}
       <div className="bg-card border p-6 rounded-3xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-bl-full pointer-events-none" />
@@ -205,6 +272,20 @@ const Dashboard = () => {
           <span>Sincronizado em tempo real</span>
         </div>
       </div>
+
+      {holidaysInMonth.length > 0 && (
+        <div className="bg-sky-50 border border-sky-200 text-sky-800 p-4 rounded-xl text-sm font-medium flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-300">
+          <span className="text-base">📅</span>
+          <div>
+            <p className="font-bold">Atenção: Feriado(s) em {meses[activeMonth - 1]}</p>
+            <p className="text-xs text-sky-700 mt-0.5 leading-normal">
+              Este mês contém os seguintes feriados: 
+              <span className="font-bold">{holidaysInMonth.map(h => ` ${h.day} (${h.name})`).join(', ')}</span>. 
+              Ao lançar as horas, lembre-se de considerar estes dias nas Aulas Programadas (AP).
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Grid Indicadores */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -238,14 +319,86 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* Charts & Status lists */}
+      {/* Admin Analytics Section */}
+      {user?.role === 'ADMIN' && analytics && (
+        <div className="space-y-6">
+          <h3 className="text-xl font-black text-slate-800 flex items-center gap-2 border-b pb-2">
+            <TrendingUp className="text-primary" /> 
+            Análise Anual de Desempenho e Custos ({activeYear})
+          </h3>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Evolução de Custos */}
+            <div className="bg-card p-6 rounded-3xl border shadow-sm space-y-4">
+              <h3 className="font-bold text-sm text-slate-800">Evolução de Custos Salariais</h3>
+              <div className="h-[250px] w-full pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={analyticsEvolution} margin={{top: 10, right: 10, left: -20, bottom: 0}}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11, fontWeight: 'bold'}} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} tickFormatter={(value) => `${value / 1000}k`} />
+                    <Tooltip cursor={{fill: '#f8fafc'}} formatter={(value) => [`${value.toLocaleString('pt-MZ')} Mt`, 'Custo']} />
+                    <Line type="monotone" dataKey="Custo (Meticais)" stroke="#10b981" strokeWidth={3} dot={{r: 4, fill: '#10b981', strokeWidth: 2}} activeDot={{r: 6}} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* AP vs AD */}
+            <div className="bg-card p-6 rounded-3xl border shadow-sm space-y-4">
+              <h3 className="font-bold text-sm text-slate-800">Aulas Programadas vs Dadas</h3>
+              <div className="h-[250px] w-full pt-4">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={analyticsEvolution} margin={{top: 10, right: 10, left: -20, bottom: 0}}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11, fontWeight: 'bold'}} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} />
+                    <Tooltip cursor={{fill: '#f8fafc'}} />
+                    <Legend iconType="circle" wrapperStyle={{fontSize: 10, paddingTop: 10}} />
+                    <Bar dataKey="Aulas Programadas (AP)" fill="#00acc1" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Aulas Dadas (AD)" fill="#745af2" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Ranking de Custos */}
+          <div className="bg-card p-6 rounded-3xl border shadow-sm space-y-4">
+            <h3 className="font-bold text-sm text-slate-800 flex items-center gap-2">
+              <Trophy size={16} className="text-amber-500" />
+              Ranking Anual de Custos por Curso
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {analytics.ranking.map((rank, index) => (
+                <div key={rank.curso_id} className="flex items-center gap-4 bg-secondary/20 p-4 rounded-2xl border">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ${index === 0 ? 'bg-amber-100 text-amber-700 border border-amber-200' : index === 1 ? 'bg-slate-200 text-slate-700 border border-slate-300' : index === 2 ? 'bg-orange-100 text-orange-800 border border-orange-200' : 'bg-secondary text-muted-foreground'}`}>
+                    #{index + 1}
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-800 leading-tight mb-1">{CURSO_NOME[rank.curso_id] || `Curso ${rank.curso_id}`}</p>
+                    <p className="text-sm font-black text-primary">{rank.custo_total.toLocaleString('pt-MZ')} Mt</p>
+                  </div>
+                </div>
+              ))}
+              {analytics.ranking.length === 0 && (
+                <p className="text-xs text-muted-foreground italic col-span-full">Sem dados financeiros registados para {activeYear}.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Basic Charts & Status lists (For everyone) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Course Chart */}
         <div className="lg:col-span-2 bg-card p-6 rounded-3xl border shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b pb-4">
             <div>
-              <h3 className="font-bold text-lg text-slate-800">Distribuição de Carga Horária e Professores</h3>
-              <p className="text-xs text-muted-foreground">Visão geral do corpo docente e horas programadas semanais por área</p>
+              <h3 className="font-bold text-lg text-slate-800">Distribuição Mês Atual</h3>
+              <p className="text-xs text-muted-foreground">Visão geral do corpo docente e horas programadas neste mês</p>
             </div>
           </div>
           
@@ -269,7 +422,7 @@ const Dashboard = () => {
           <div className="space-y-4">
             <div className="border-b pb-4">
               <h3 className="font-bold text-lg text-slate-800">Estado de Lançamento</h3>
-              <p className="text-xs text-muted-foreground">Monitoria de folhas salariais deste mês</p>
+              <p className="text-xs text-muted-foreground">Monitoria de folhas salariais do mês {meses[activeMonth - 1]}</p>
             </div>
 
             <div className="space-y-3">
@@ -312,6 +465,14 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {isAvisosModalOpen && (
+        <AvisosModal 
+          onClose={() => setIsAvisosModalOpen(false)} 
+          onAvisosChanged={fetchDashboardData}
+        />
+      )}
+
     </div>
   );
 };
