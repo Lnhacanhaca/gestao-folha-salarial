@@ -296,136 +296,138 @@ const RelatoriosPage = () => {
               <p className="text-muted-foreground font-semibold">Processando dados...</p>
             </div>
           ) : (
-            <div className="overflow-x-auto w-full scrollbar-thin print:border-none print:overflow-visible print:w-full">
-              <table className="w-full border-collapse text-[10px] text-center min-w-[950px] print:min-w-0">
-                <thead>
-                  <tr className="bg-gray-200 border-2 border-black">
-                    <th rowSpan={3} className="p-1.5 border-2 border-black w-8">Nº</th>
-                    <th rowSpan={3} className="p-1.5 border-2 border-black w-56 text-left">Docentes</th>
-                    <th colSpan={10} className="p-1.5 border-2 border-black">Aulas Mensais</th>
-                    <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Total de Horas</th>
-                    <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Valor a Receber das Aulas</th>
-                  </tr>
-                  <tr className="bg-gray-200 border-2 border-black">
-                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
-                      1ª Semana
-                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[0]})</span>
-                    </th>
-                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
-                      2ª Semana
-                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[1]})</span>
-                    </th>
-                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
-                      3ª Semana
-                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[2]})</span>
-                    </th>
-                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
-                      4ª Semana
-                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[3]})</span>
-                    </th>
-                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
-                      5ª Semana
-                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[4]})</span>
-                    </th>
-                  </tr>
-                  <tr className="bg-gray-200 border-2 border-black text-[9px]">
-                    <th className="p-1 border-2 border-black w-8">AP</th>
-                    <th className="p-1 border-2 border-black w-8">AD</th>
-                    <th className="p-1 border-2 border-black w-8">AP</th>
-                    <th className="p-1 border-2 border-black w-8">AD</th>
-                    <th className="p-1 border-2 border-black w-8">AP</th>
-                    <th className="p-1 border-2 border-black w-8">AD</th>
-                    <th className="p-1 border-2 border-black w-8">AP</th>
-                    <th className="p-1 border-2 border-black w-8">AD</th>
-                    <th className="p-1 border-2 border-black w-8">AP</th>
-                    <th className="p-1 border-2 border-black w-8">AD</th>
-                    <th className="p-1 border-2 border-black">Programadas</th>
-                    <th className="p-1 border-2 border-black">Dadas</th>
-                    <th className="p-1 border-2 border-black">Programadas</th>
-                    <th className="p-1 border-2 border-black">Dadas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {dados.map((row, idx) => {
-                    const s = row.semanas || Array(5).fill({ap: 0, ad: 0});
-                    const s1 = s[0] || {ap: 0, ad: 0};
-                    const s2 = s[1] || {ap: 0, ad: 0};
-                    const s3 = s[2] || {ap: 0, ad: 0};
-                    const s4 = s[3] || {ap: 0, ad: 0};
-                    const s5 = s[4] || {ap: 0, ad: 0};
+            <>
+              <div className="overflow-x-auto w-full scrollbar-thin print:border-none print:overflow-visible print:w-full">
+                <table className="w-full border-collapse text-[10px] text-center min-w-[950px] print:min-w-0">
+                  <thead>
+                    <tr className="bg-gray-200 border-2 border-black">
+                      <th rowSpan={3} className="p-1.5 border-2 border-black w-8">Nº</th>
+                      <th rowSpan={3} className="p-1.5 border-2 border-black w-56 text-left">Docentes</th>
+                      <th colSpan={10} className="p-1.5 border-2 border-black">Aulas Mensais</th>
+                      <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Total de Horas</th>
+                      <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Valor a Receber das Aulas</th>
+                    </tr>
+                    <tr className="bg-gray-200 border-2 border-black">
+                      <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                        1ª Semana
+                        <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[0]})</span>
+                      </th>
+                      <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                        2ª Semana
+                        <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[1]})</span>
+                      </th>
+                      <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                        3ª Semana
+                        <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[2]})</span>
+                      </th>
+                      <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                        4ª Semana
+                        <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[3]})</span>
+                      </th>
+                      <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                        5ª Semana
+                        <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[4]})</span>
+                      </th>
+                    </tr>
+                    <tr className="bg-gray-200 border-2 border-black text-[9px]">
+                      <th className="p-1 border-2 border-black w-8">AP</th>
+                      <th className="p-1 border-2 border-black w-8">AD</th>
+                      <th className="p-1 border-2 border-black w-8">AP</th>
+                      <th className="p-1 border-2 border-black w-8">AD</th>
+                      <th className="p-1 border-2 border-black w-8">AP</th>
+                      <th className="p-1 border-2 border-black w-8">AD</th>
+                      <th className="p-1 border-2 border-black w-8">AP</th>
+                      <th className="p-1 border-2 border-black w-8">AD</th>
+                      <th className="p-1 border-2 border-black w-8">AP</th>
+                      <th className="p-1 border-2 border-black w-8">AD</th>
+                      <th className="p-1 border-2 border-black">Programadas</th>
+                      <th className="p-1 border-2 border-black">Dadas</th>
+                      <th className="p-1 border-2 border-black">Programadas</th>
+                      <th className="p-1 border-2 border-black">Dadas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {dados.map((row, idx) => {
+                      const s = row.semanas || Array(5).fill({ap: 0, ad: 0});
+                      const s1 = s[0] || {ap: 0, ad: 0};
+                      const s2 = s[1] || {ap: 0, ad: 0};
+                      const s3 = s[2] || {ap: 0, ad: 0};
+                      const s4 = s[3] || {ap: 0, ad: 0};
+                      const s5 = s[4] || {ap: 0, ad: 0};
 
-                    return (
-                      <tr key={idx} className="border-2 border-black hover:bg-gray-50">
-                        <td className="p-1.5 border-2 border-black">{idx + 1}</td>
-                        <td className="p-1.5 border-2 border-black text-left font-medium">
-                          {row.docente_nome}
-                          {(row.retificada === 1 || row.retificada === true) && (
-                            <span className="text-[8px] text-amber-600 font-extrabold ml-1 print:text-black">
-                              (Retificada)
-                            </span>
-                          )}
-                        </td>
-                        
-                        <td className="p-1.5 border-2 border-black">{s1.ap || 0}</td>
-                        <td className="p-1.5 border-2 border-black">{s1.ad || 0}</td>
-                        <td className="p-1.5 border-2 border-black">{s2.ap || 0}</td>
-                        <td className="p-1.5 border-2 border-black">{s2.ad || 0}</td>
-                        <td className="p-1.5 border-2 border-black">{s3.ap || 0}</td>
-                        <td className="p-1.5 border-2 border-black">{s3.ad || 0}</td>
-                        <td className="p-1.5 border-2 border-black">{s4.ap || 0}</td>
-                        <td className="p-1.5 border-2 border-black">{s4.ad || 0}</td>
-                        <td className="p-1.5 border-2 border-black">{s5.ap || 0}</td>
-                        <td className="p-1.5 border-2 border-black">{s5.ad || 0}</td>
+                      return (
+                        <tr key={idx} className="border-2 border-black hover:bg-gray-50">
+                          <td className="p-1.5 border-2 border-black">{idx + 1}</td>
+                          <td className="p-1.5 border-2 border-black text-left font-medium">
+                            {row.docente_nome}
+                            {(row.retificada === 1 || row.retificada === true) && (
+                              <span className="text-[8px] text-amber-600 font-extrabold ml-1 print:text-black">
+                                (Retificada)
+                              </span>
+                            )}
+                          </td>
+                          
+                          <td className="p-1.5 border-2 border-black">{s1.ap || 0}</td>
+                          <td className="p-1.5 border-2 border-black">{s1.ad || 0}</td>
+                          <td className="p-1.5 border-2 border-black">{s2.ap || 0}</td>
+                          <td className="p-1.5 border-2 border-black">{s2.ad || 0}</td>
+                          <td className="p-1.5 border-2 border-black">{s3.ap || 0}</td>
+                          <td className="p-1.5 border-2 border-black">{s3.ad || 0}</td>
+                          <td className="p-1.5 border-2 border-black">{s4.ap || 0}</td>
+                          <td className="p-1.5 border-2 border-black">{s4.ad || 0}</td>
+                          <td className="p-1.5 border-2 border-black">{s5.ap || 0}</td>
+                          <td className="p-1.5 border-2 border-black">{s5.ad || 0}</td>
 
-                        <td className="p-1.5 border-2 border-black font-semibold">{row.total_ap}</td>
-                        <td className="p-1.5 border-2 border-black font-extrabold">{row.total_ad}</td>
-                        
-                        <td className="p-1.5 border-2 border-black">
-                          {formatarValor(row.total_ap * 500)}
-                        </td>
-                        <td className="p-1.5 border-2 border-black font-extrabold">
-                          {formatarValor(row.total_ad * 500)}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {/* Total Row */}
-                  <tr className="border-2 border-black bg-gray-200 font-bold">
-                    <td colSpan={2} className="p-1.5 text-center">Total Geral</td>
-                    
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ap) || 0), 0)}</td>
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ad) || 0), 0)}</td>
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ap) || 0), 0)}</td>
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ad) || 0), 0)}</td>
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ap) || 0), 0)}</td>
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ad) || 0), 0)}</td>
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ap) || 0), 0)}</td>
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ad) || 0), 0)}</td>
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ap) || 0), 0)}</td>
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ad) || 0), 0)}</td>
+                          <td className="p-1.5 border-2 border-black font-semibold">{row.total_ap}</td>
+                          <td className="p-1.5 border-2 border-black font-extrabold">{row.total_ad}</td>
+                          
+                          <td className="p-1.5 border-2 border-black">
+                            {formatarValor(row.total_ap * 500)}
+                          </td>
+                          <td className="p-1.5 border-2 border-black font-extrabold">
+                            {formatarValor(row.total_ad * 500)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {/* Total Row */}
+                    <tr className="border-2 border-black bg-gray-200 font-bold">
+                      <td colSpan={2} className="p-1.5 text-center">Total Geral</td>
+                      
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ap) || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ad) || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ap) || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ad) || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ap) || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ad) || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ap) || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ad) || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ap) || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ad) || 0), 0)}</td>
 
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ap || 0), 0)}</td>
-                    <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ad || 0), 0)}</td>
-                    
-                    <td className="p-1.5 border-2 border-black">
-                      {formatarValor(dados.reduce((acc, r) => acc + (r.total_ap || 0), 0) * 500)}
-                    </td>
-                    <td className="p-1.5 border-2 border-black bg-yellow-100 text-[11px] font-black text-black">
-                      {formatarValor(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-4 flex justify-end">
-              <div className="border-2 border-black p-2 bg-gray-50 text-right min-w-[280px]">
-                <span className="text-[10px] uppercase font-bold tracking-wider text-black block">Valor Total a ser Remunerado:</span>
-                <span className="text-sm font-black text-black block mt-0.5">
-                  {formatarValor(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500)}
-                </span>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ap || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ad || 0), 0)}</td>
+                      
+                      <td className="p-1.5 border-2 border-black">
+                        {formatarValor(dados.reduce((acc, r) => acc + (r.total_ap || 0), 0) * 500)}
+                      </td>
+                      <td className="p-1.5 border-2 border-black bg-yellow-100 text-[11px] font-black text-black">
+                        {formatarValor(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
-            </div>
+
+              <div className="mt-4 flex justify-end">
+                <div className="border-2 border-black p-2 bg-gray-50 text-right min-w-[280px]">
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-black block">Valor Total a ser Remunerado:</span>
+                  <span className="text-sm font-black text-black block mt-0.5">
+                    {formatarValor(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500)}
+                  </span>
+                </div>
+              </div>
+            </>
           )}
 
           {/* Dynamic Signatures Footer */}
