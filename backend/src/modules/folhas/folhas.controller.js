@@ -2,9 +2,14 @@ const db = require('../../config/database');
 const { logAction } = require('../../shared/utils/auditLogger');
 
 const importar = async (req, res, next) => {
+  const { mes, ano, curso_id, dados } = req.body;
+  
+  if (parseInt(curso_id) === 1) {
+    return res.status(400).json({ error: 'Não é permitido fazer lançamentos directos na vista Geral Consolidada.' });
+  }
+
   const trx = await db.transaction();
   try {
-    const { mes, ano, curso_id, dados } = req.body;
 
     for (const item of dados) {
       const trimmedNome = item.docente_nome.trim();
@@ -289,4 +294,47 @@ const getGeral = async (req, res, next) => {
   }
 };
 
-module.exports = { importar, getByCurso, getGeral };
+const deletarDocenteFolha = async (req, res, next) => {
+  const trx = await db.transaction();
+  try {
+    const { curso_id, docente_nome } = req.body;
+    const { mes, ano } = req.query;
+
+    const trimmedNome = docente_nome.trim();
+    const docente = await trx('docentes')
+      .whereRaw('LOWER(nome) = ?', [trimmedNome.toLowerCase()])
+      .first();
+
+    if (docente) {
+      const folha = await trx('folhas')
+        .where({ docente_id: docente.id, mes, ano, curso_id })
+        .first();
+
+      if (folha) {
+        await trx('folha_detalhes').where({ folha_id: folha.id }).del();
+        await trx('folhas').where({ id: folha.id }).del();
+
+        await trx.commit();
+
+        await logAction({
+          userId: req.user.id,
+          username: req.user.username,
+          action: 'DELETE_FOLHA',
+          targetType: 'folhas',
+          targetId: curso_id,
+          details: `Removido lançamento do docente "${trimmedNome}" no curso ID ${curso_id} do mês ${mes}/${ano}.`
+        });
+
+        return res.json({ message: 'Lançamento do docente removido com sucesso' });
+      }
+    }
+
+    await trx.rollback();
+    res.json({ message: 'Nenhum lançamento encontrado para remover' });
+  } catch (error) {
+    await trx.rollback();
+    next(error);
+  }
+};
+
+module.exports = { importar, getByCurso, getGeral, deletarDocenteFolha };

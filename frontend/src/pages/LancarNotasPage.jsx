@@ -78,9 +78,9 @@ const LancarNotasPage = () => {
   const isRectificationPeriod = currentDay >= 5 && currentDay <= 20;
   const canEditPreviousMonth = isPreviousMonth && isRectificationPeriod;
 
-  const isReadOnly = (ano < currentYear || (ano === currentYear && mes < currentMonth)) 
+  const isReadOnly = ((ano < currentYear || (ano === currentYear && mes < currentMonth)) 
     && !canEditPreviousMonth 
-    && user?.role !== 'ADMIN';
+    && user?.role !== 'ADMIN') || cursoId === 1;
   
   // Use a ref to access latest state inside the interval without restarting it
   const stateRef = React.useRef({ mes, ano, cursoId, dados });
@@ -99,7 +99,7 @@ const LancarNotasPage = () => {
   useEffect(() => {
     const timer = setInterval(async () => {
       const { mes, ano, cursoId, dados } = stateRef.current;
-      if (dados.length > 0) {
+      if (dados.length > 0 && cursoId !== 1) {
         try {
           await api.post('/folhas/importar', { mes, ano, curso_id: cursoId, dados });
           setLastSaved(new Date());
@@ -125,8 +125,56 @@ const LancarNotasPage = () => {
     }]);
   };
 
-  const removeDocente = (index) => {
-    setDados(dados.filter((_, i) => i !== index));
+  const handleRemoveDocente = async (index) => {
+    if (isReadOnly) return;
+    const doc = dados[index];
+    
+    // If it's a new unsaved teacher, just remove from state
+    if (!doc.docente_nome.trim() || (!doc.total_ad && !doc.semanas.some(s => s.ad > 0))) {
+      setDados(dados.filter((_, i) => i !== index));
+      return;
+    }
+
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="font-semibold text-destructive text-sm">
+          Remover "{doc.docente_nome}"?
+        </p>
+        <p className="text-xs text-muted-foreground leading-normal">
+          Isso apagará permanentemente todos os lançamentos de horas deste docente para este curso no mês {mes}/{ano}.
+        </p>
+        <div className="flex justify-end gap-2 mt-1">
+          <button 
+            onClick={() => toast.dismiss(t.id)} 
+            className="px-3 py-1.5 text-xs font-bold bg-secondary hover:bg-secondary/80 rounded-lg transition-colors border"
+          >
+            Cancelar
+          </button>
+          <button 
+            onClick={async () => {
+              toast.dismiss(t.id);
+              setLoading(true);
+              try {
+                await api.post(`/folhas/deletar-docente?mes=${mes}&ano=${ano}`, {
+                  curso_id: cursoId,
+                  docente_nome: doc.docente_nome
+                });
+                setDados(dados.filter((_, i) => i !== index));
+                setLastSaved(new Date());
+                toast.success(`Lançamento de "${doc.docente_nome}" removido com sucesso!`);
+              } catch (err) {
+                toast.error('Erro ao remover lançamento: ' + (err.response?.data?.error?.message || err.message));
+              } finally {
+                setLoading(false);
+              }
+            }} 
+            className="px-3 py-1.5 text-xs font-bold bg-destructive hover:bg-destructive/90 text-white rounded-lg transition-colors shadow-sm"
+          >
+            Sim, apagar
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity, style: { minWidth: '350px' } });
   };
 
   const updateCell = (docIndex, weekIndex, field, value) => {
@@ -264,33 +312,56 @@ const LancarNotasPage = () => {
           };
         });
 
-        // Merge saved folha with defaultMapped
-        const mergedDados = defaultMapped.map(def => {
-          const saved = savedFolha.find(s => s.docente_nome.trim().toLowerCase() === def.docente_nome.trim().toLowerCase());
-          if (saved) {
-            const mergedSemanas = def.semanas.map((defSemana, sIdx) => {
-              const savedSemana = saved.semanas?.[sIdx];
-              return {
-                semana: sIdx + 1,
-                // ALWAYS override with the teacher profile's current AP!
-                ap: defSemana.ap,
-                ad: savedSemana ? (parseFloat(savedSemana.ad) || 0) : 0
-              };
-            });
-
-            return {
-              ...def,
-              docente_nome: saved.docente_nome,
-              total_ap: mergedSemanas.reduce((acc, s) => acc + s.ap, 0),
-              total_ad: mergedSemanas.reduce((acc, s) => acc + s.ad, 0),
-              valor_receber: mergedSemanas.reduce((acc, s) => acc + s.ad, 0) * 500,
-              retificada: saved.retificada,
-              observacoes: saved.observacoes,
-              semanas: mergedSemanas
-            };
-          }
-          return def;
+        // Find saved sheets that are NOT in defaultMapped (historical or unassigned)
+        const extraSaved = (savedFolha || []).filter(saved => 
+          !defaultMapped.some(def => def.docente_nome.trim().toLowerCase() === saved.docente_nome.trim().toLowerCase())
+        ).map(saved => {
+          const weeks = saved.semanas || Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: 0, ad: 0 }));
+          return {
+            docente_nome: saved.docente_nome,
+            total_ap: saved.total_ap || weeks.reduce((acc, s) => acc + (s.ap || 0), 0),
+            total_ad: saved.total_ad || weeks.reduce((acc, s) => acc + (s.ad || 0), 0),
+            valor_receber: saved.valor_receber || (weeks.reduce((acc, s) => acc + (s.ad || 0), 0) * 500),
+            retificada: saved.retificada || 0,
+            observacoes: saved.observacoes || null,
+            semanas: weeks.map((s, sIdx) => ({
+              semana: sIdx + 1,
+              ap: s.ap || 0,
+              ad: s.ad || 0
+            }))
+          };
         });
+
+        // Merge saved folha with defaultMapped
+        const mergedDados = [
+          ...defaultMapped.map(def => {
+            const saved = savedFolha.find(s => s.docente_nome.trim().toLowerCase() === def.docente_nome.trim().toLowerCase());
+            if (saved) {
+              const mergedSemanas = def.semanas.map((defSemana, sIdx) => {
+                const savedSemana = saved.semanas?.[sIdx];
+                return {
+                  semana: sIdx + 1,
+                  // ALWAYS override with the teacher profile's current AP!
+                  ap: defSemana.ap,
+                  ad: savedSemana ? (parseFloat(savedSemana.ad) || 0) : 0
+                };
+              });
+
+              return {
+                ...def,
+                docente_nome: saved.docente_nome,
+                total_ap: mergedSemanas.reduce((acc, s) => acc + s.ap, 0),
+                total_ad: mergedSemanas.reduce((acc, s) => acc + s.ad, 0),
+                valor_receber: mergedSemanas.reduce((acc, s) => acc + s.ad, 0) * 500,
+                retificada: saved.retificada,
+                observacoes: saved.observacoes,
+                semanas: mergedSemanas
+              };
+            }
+            return def;
+          }),
+          ...extraSaved
+        ];
 
         setDados(mergedDados);
         setLastSaved(savedFolha && savedFolha.length > 0 ? new Date() : null);
@@ -434,6 +505,18 @@ const LancarNotasPage = () => {
           </select>
         </div>
       </div>
+      
+      {cursoId === 1 && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm font-medium flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-300">
+          <span className="text-base">⚠️</span>
+          <div>
+            <p className="font-bold">Vista Consolidada (Apenas Leitura)</p>
+            <p className="text-xs text-amber-700 mt-0.5 leading-normal">
+              O lançamento geral consolidado apresenta o somatório de horas de todos os cursos e não permite edições diretas para evitar duplicidade de dados. Para alterar, preencher ou remover horas de um docente, por favor selecione o seu curso específico no menu acima.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Input Mode Conditional Rendering */}
       {inputMode === 'individual' ? (
@@ -518,7 +601,7 @@ const LancarNotasPage = () => {
                       <span>Gravar Docente</span>
                     </button>
                     <button
-                      onClick={() => removeDocente(activeDocenteIndex)}
+                      onClick={() => handleRemoveDocente(activeDocenteIndex)}
                       disabled={isReadOnly}
                       className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30"
                       title="Remover Docente"
@@ -693,7 +776,7 @@ const LancarNotasPage = () => {
                         <Save size={16} />
                       </button>
                       <button 
-                        onClick={() => removeDocente(dIdx)}
+                        onClick={() => handleRemoveDocente(dIdx)}
                         disabled={isReadOnly}
                         className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
                         title="Remover Docente"
