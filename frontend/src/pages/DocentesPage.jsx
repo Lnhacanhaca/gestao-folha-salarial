@@ -41,33 +41,45 @@ const DocentesPage = () => {
             const apKey = keys.find(k => k.toLowerCase().includes('ap') || k.toLowerCase().includes('hora') || k.toLowerCase().includes('prog') || k.toLowerCase().includes('carga'));
             const apVal = apKey ? parseFloat(row[apKey]) || 0 : 0;
             let cursosArray = [
-              { id: 2, ap: apVal },
-              { id: 3, ap: apVal },
-              { id: 4, ap: apVal },
-              { id: 5, ap: apVal },
-              { id: 6, ap: apVal }
+              { id: 2, ap: apVal, semestre: 1 },
+              { id: 2, ap: apVal, semestre: 2 },
+              { id: 3, ap: apVal, semestre: 1 },
+              { id: 3, ap: apVal, semestre: 2 },
+              { id: 4, ap: apVal, semestre: 1 },
+              { id: 4, ap: apVal, semestre: 2 },
+              { id: 5, ap: apVal, semestre: 1 },
+              { id: 5, ap: apVal, semestre: 2 },
+              { id: 6, ap: apVal, semestre: 1 },
+              { id: 6, ap: apVal, semestre: 2 }
             ];
             
             if (cursosKey && row[cursosKey]) {
               const val = row[cursosKey].toLowerCase();
               const parsed = [];
               if (val.includes('auditoria') || val.includes('ca')) {
-                parsed.push({ id: 2, ap: apVal });
+                parsed.push({ id: 2, ap: apVal, semestre: 1 });
+                parsed.push({ id: 2, ap: apVal, semestre: 2 });
               } else if (val.includes('pública') || val.includes('publica') || val.includes('cap') || val.includes('administra')) {
-                parsed.push({ id: 3, ap: apVal });
+                parsed.push({ id: 3, ap: apVal, semestre: 1 });
+                parsed.push({ id: 3, ap: apVal, semestre: 2 });
               } else if (val.includes('contab')) {
-                parsed.push({ id: 2, ap: apVal });
-                parsed.push({ id: 3, ap: apVal });
+                parsed.push({ id: 2, ap: apVal, semestre: 1 });
+                parsed.push({ id: 2, ap: apVal, semestre: 2 });
+                parsed.push({ id: 3, ap: apVal, semestre: 1 });
+                parsed.push({ id: 3, ap: apVal, semestre: 2 });
               }
 
               if (val.includes('minas') || val.includes('em')) {
-                parsed.push({ id: 4, ap: apVal });
+                parsed.push({ id: 4, ap: apVal, semestre: 1 });
+                parsed.push({ id: 4, ap: apVal, semestre: 2 });
               } else if (val.includes('processa') || val.includes('epm') || val.includes('mineral')) {
-                parsed.push({ id: 5, ap: apVal });
+                parsed.push({ id: 5, ap: apVal, semestre: 1 });
+                parsed.push({ id: 5, ap: apVal, semestre: 2 });
               }
 
               if (val.includes('inf') || val.includes('ei')) {
-                parsed.push({ id: 6, ap: apVal });
+                parsed.push({ id: 6, ap: apVal, semestre: 1 });
+                parsed.push({ id: 6, ap: apVal, semestre: 2 });
               }
               if (parsed.length > 0) cursosArray = parsed;
             }
@@ -217,28 +229,21 @@ const DocentesPage = () => {
     }
   };
 
-  const handleCursoToggle = (cursoId) => {
+  const handleCursoToggle = (cursoId, semestre) => {
     setFormData(prev => {
-      const exists = prev.cursos.find(c => c.id === cursoId);
+      const exists = prev.cursos.find(c => c.id === cursoId && c.semestre === semestre);
       if (exists) {
-        return { ...prev, cursos: prev.cursos.filter(c => c.id !== cursoId) };
+        return { ...prev, cursos: prev.cursos.filter(c => !(c.id === cursoId && c.semestre === semestre)) };
       } else {
-        return { ...prev, cursos: [...prev.cursos, { id: cursoId, ap: 0, semestre: 1 }] };
+        return { ...prev, cursos: [...prev.cursos, { id: cursoId, ap: 0, semestre }] };
       }
     });
   };
 
-  const handleApChange = (cursoId, apValue) => {
+  const handleApChange = (cursoId, semestre, apValue) => {
     setFormData(prev => ({
       ...prev,
-      cursos: prev.cursos.map(c => c.id === cursoId ? { ...c, ap: parseFloat(apValue) || 0 } : c)
-    }));
-  };
-
-  const handleSemestreChange = (cursoId, semestreValue) => {
-    setFormData(prev => ({
-      ...prev,
-      cursos: prev.cursos.map(c => c.id === cursoId ? { ...c, semestre: parseInt(semestreValue) || 1 } : c)
+      cursos: prev.cursos.map(c => (c.id === cursoId && c.semestre === semestre) ? { ...c, ap: parseFloat(apValue) || 0 } : c)
     }));
   };
 
@@ -389,62 +394,70 @@ const DocentesPage = () => {
               </div>
 
               <div className="space-y-2 pt-2">
-                <label className="text-sm font-medium">Cursos Lecionados & Horas (AP/Semanal)</label>
-                <div className="grid grid-cols-1 gap-2 mt-1">
+                <label className="text-sm font-medium block mb-1">Cursos Lecionados & Horas (AP/Semanal)</label>
+                <div className="grid grid-cols-1 gap-3 mt-1 max-h-[350px] overflow-y-auto pr-1">
                   {CURSOS_OPCOES.filter(c => c.id !== 1).map(curso => {
-                    const isChecked = formData.cursos.find(c => c.id === curso.id);
+                    const isCheckedSem1 = formData.cursos.find(c => c.id === curso.id && c.semestre === 1);
+                    const isCheckedSem2 = formData.cursos.find(c => c.id === curso.id && c.semestre === 2);
                     return (
-                      <div key={curso.id} className={`flex flex-col sm:flex-row sm:items-center gap-2 p-2 rounded-lg transition-colors border border-transparent ${isChecked ? 'bg-primary/5 border-primary/20' : 'bg-secondary/30 hover:bg-secondary/50'}`}>
-                        <label className="flex items-center gap-2 cursor-pointer flex-1">
-                          <input 
-                            type="checkbox" 
-                            checked={!!isChecked}
-                            onChange={() => handleCursoToggle(curso.id)}
-                            className="rounded text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm font-medium">{curso.nome}</span>
-                        </label>
-                        {isChecked && (
-                          <div className="flex flex-wrap items-center gap-3 ml-6 sm:ml-0 animate-in fade-in slide-in-from-right-4 duration-200">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs text-muted-foreground font-semibold">AP:</span>
+                      <div key={curso.id} className="p-3 bg-secondary/20 rounded-xl border border-muted/50 space-y-2">
+                        <span className="text-xs font-bold text-slate-800 block">{curso.nome}</span>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {/* 1º Semestre */}
+                          <div className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${isCheckedSem1 ? 'bg-primary/5 border-primary/20' : 'bg-background border-muted'}`}>
+                            <label className="flex items-center gap-1.5 cursor-pointer select-none">
                               <input 
-                                type="number" 
-                                value={isChecked.ap || ''}
-                                onChange={(e) => handleApChange(curso.id, e.target.value)}
-                                placeholder="0"
-                                min="0"
-                                className="w-14 bg-background border rounded-md p-1.5 text-sm outline-none focus:ring-2 focus:ring-primary/50 text-center font-bold"
+                                type="checkbox" 
+                                checked={!!isCheckedSem1}
+                                onChange={() => handleCursoToggle(curso.id, 1)}
+                                className="rounded text-primary focus:ring-primary h-3.5 w-3.5"
                               />
-                              <span className="text-xs text-muted-foreground">h/semana</span>
-                            </div>
-
-                            <div className="flex bg-secondary p-0.5 rounded-lg border text-xs">
-                              <button
-                                type="button"
-                                onClick={() => handleSemestreChange(curso.id, 1)}
-                                className={`px-2 py-1 rounded-md font-bold transition-all ${
-                                  (isChecked.semestre || 1) === 1 
-                                    ? 'bg-primary text-white shadow-sm' 
-                                    : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                              >
-                                1º Sem
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleSemestreChange(curso.id, 2)}
-                                className={`px-2 py-1 rounded-md font-bold transition-all ${
-                                  isChecked.semestre === 2 
-                                    ? 'bg-primary text-white shadow-sm' 
-                                    : 'text-muted-foreground hover:text-foreground'
-                                }`}
-                              >
-                                2º Sem
-                              </button>
-                            </div>
+                              <span className="text-[11px] font-bold text-slate-700">1º Semestre</span>
+                            </label>
+                            {isCheckedSem1 && (
+                              <div className="flex items-center gap-1 ml-2 animate-in fade-in duration-200">
+                                <span className="text-[10px] text-muted-foreground font-black">AP:</span>
+                                <input 
+                                  type="number" 
+                                  value={isCheckedSem1.ap || ''}
+                                  onChange={(e) => handleApChange(curso.id, 1, e.target.value)}
+                                  placeholder="0"
+                                  min="0"
+                                  className="w-12 bg-background border rounded-md p-1 text-[11px] outline-none focus:ring-2 focus:ring-primary/50 text-center font-bold"
+                                />
+                                <span className="text-[10px] text-muted-foreground">h</span>
+                              </div>
+                            )}
                           </div>
-                        )}
+
+                          {/* 2º Semestre */}
+                          <div className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${isCheckedSem2 ? 'bg-primary/5 border-primary/20' : 'bg-background border-muted'}`}>
+                            <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                              <input 
+                                type="checkbox" 
+                                checked={!!isCheckedSem2}
+                                onChange={() => handleCursoToggle(curso.id, 2)}
+                                className="rounded text-primary focus:ring-primary h-3.5 w-3.5"
+                              />
+                              <span className="text-[11px] font-bold text-slate-700">2º Semestre</span>
+                            </label>
+                            {isCheckedSem2 && (
+                              <div className="flex items-center gap-1 ml-2 animate-in fade-in duration-200">
+                                <span className="text-[10px] text-muted-foreground font-black">AP:</span>
+                                <input 
+                                  type="number" 
+                                  value={isCheckedSem2.ap || ''}
+                                  onChange={(e) => handleApChange(curso.id, 2, e.target.value)}
+                                  placeholder="0"
+                                  min="0"
+                                  className="w-12 bg-background border rounded-md p-1 text-[11px] outline-none focus:ring-2 focus:ring-primary/50 text-center font-bold"
+                                />
+                                <span className="text-[10px] text-muted-foreground">h</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     );
                   })}

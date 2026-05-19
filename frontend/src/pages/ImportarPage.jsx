@@ -212,7 +212,18 @@ const ImportarPage = () => {
             } else if (Array.isArray(doc.cursos)) {
               cursosArray = doc.cursos;
             }
-            const cursoObj = cursosArray.find(c => (c.id || c) === fCursoId);
+            
+            // Determine active semester based on the selected reference month:
+            // Semester 1: February to June (months 2-6) - mapped as months 1-6
+            // Semester 2: July to December (months 7-12)
+            const activeSemestre = (fMes >= 7 && fMes <= 12) ? 2 : 1;
+            
+            const cursoObj = cursosArray.find(c => {
+              const cid = c.id !== undefined ? parseInt(c.id) : parseInt(c);
+              const csem = c.semestre !== undefined ? parseInt(c.semestre) : 1;
+              return cid === fCursoId && csem === activeSemestre;
+            });
+
             if (cursoObj && cursoObj.ap !== undefined) {
               apValue = parseFloat(cursoObj.ap) || 0;
             }
