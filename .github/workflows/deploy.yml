@@ -46,7 +46,7 @@ jobs:
             fi
 
             # Get database container ID from compose file
-            CONTAINER_ID=$(docker-compose -f docker-compose.prod.yml ps -q postgres_db)
+            CONTAINER_ID=$(docker compose -f docker compose.prod.yml ps -q postgres_db)
             if [ -z "$CONTAINER_ID" ]; then
               echo "❌ Erro: Serviço de banco de dados 'postgres_db' não encontrado"
               exit 1
