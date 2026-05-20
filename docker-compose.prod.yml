@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # --- BANCO DE DADOS (OPCIONAL NO COMPOSE DE PRODUÇÃO) ---
+  # Se você preferir usar o PostgreSQL já instalado diretamente no seu VPS Host,
+  # você pode comentar ou deletar este serviço 'postgres_db' e ajustar a variável
+  # DATABASE_URL do backend no arquivo '.env' para apontar para o seu banco externo.
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: sgfs_prod_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- BACKEND ---
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: sgfs_prod_backend
+    restart: always
+    ports:
+      - "127.0.0.1:3001:3001" # Exposto apenas localmente para segurança, Nginx fará o proxy
+    environment:
+      PORT: 3001
+      NODE_ENV: production
+      JWT_SECRET: ${JWT_SECRET}
+      # Se usar o banco do container:
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@postgres_db:5432/${DB_NAME}
+      # Se usar banco externo no VPS Host, configure a string no .env e descomente a linha abaixo:
+      # DATABASE_URL: ${DATABASE_URL}
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+
+  # --- FRONTEND ---
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+      args:
+        # Define a URL de produção da API durante o build dos arquivos estáticos.
+        # Nginx redirecionará as chamadas de /api para o backend.
+        VITE_API_URL: https://${DOMAIN}/api
+    container_name: sgfs_prod_frontend
+    restart: always
+    ports:
+      - "127.0.0.1:8080:80" # Exposto apenas localmente, Nginx fará o proxy na porta 80/443
+    depends_on:
+      - backend
+
+volumes:
+  postgres_prod_data:
