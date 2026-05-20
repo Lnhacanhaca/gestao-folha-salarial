@@ -1,0 +1,63 @@
+name: LNSOTECH Deploy & Backup
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /opt/apps/gestao-folha-salarial
+            git pull origin main
+
+            # Build and start services using production compose file
+            docker-compose -f docker-compose.prod.yml up -d --build
+
+            echo "✅ Deploy concluído com sucesso!"
+
+  backup:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    needs: deploy
+    steps:
+      - name: Backup Database via SSH
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            BACKUP_DIR="/opt/apps/gestao-folha-salarial/backups"
+            mkdir -p $BACKUP_DIR
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+
+            # Source environment variables from .env file on VPS
+            cd /opt/apps/gestao-folha-salarial
+            if [ -f .env ]; then
+              export $(grep -v '^#' .env | xargs)
+            fi
+
+            # Get database container ID from compose file
+            CONTAINER_ID=$(docker-compose -f docker-compose.prod.yml ps -q postgres_db)
+            if [ -z "$CONTAINER_ID" ]; then
+              echo "❌ Erro: Serviço de banco de dados 'postgres_db' não encontrado"
+              exit 1
+            fi
+
+            # Execute backup using environment variables
+            # The container uses POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
+            # which are set from DB_USER, DB_PASSWORD, DB_NAME in .env
+            docker exec $CONTAINER_ID pg_dump -U $POSTGRES_USER $POSTGRES_DB > "$BACKUP_DIR/db_backup_$TIMESTAMP.sql"
+
+            # Keep only the last 10 backups
+            ls -t $BACKUP_DIR/db_backup_*.sql | tail -n +11 | xargs -r rm 2>/dev/null || true
+
+            echo "✅ Backup concluído: db_backup_$TIMESTAMP.sql"

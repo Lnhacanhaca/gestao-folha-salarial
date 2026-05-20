@@ -1,144 +1,22 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React from 'react';
 import { UserPlus, Shield, User, Loader2, Edit2, Trash2, X, Save, Key, BookOpen } from 'lucide-react';
-import { toast } from 'react-hot-toast';
-import api from '../services/api';
+import { useUsuarios } from '../hooks/useUsuarios.jsx';
 import { CURSO_NOME, CURSOS_GERIDOS_LABEL } from '../lib/cursos';
 
 const UsuariosPage = () => {
-  const queryClient = useQueryClient();
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-    role: 'DIRETOR_CURSO',
-    curso_id: 2
-  });
-
-  // Fetch Users
-  const { data: users, isLoading } = useQuery({
-    queryKey: ['users'],
-    queryFn: async () => {
-      const { data } = await api.get('/users');
-      return data;
-    }
-  });
-
-  // Create User Mutation
-  const createMutation = useMutation({
-    mutationFn: (newUser) => api.post('/users', newUser),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      closeModal();
-      toast.success('Utilizador criado com sucesso!');
-    },
-    onError: (err) => {
-      toast.error('Erro ao criar utilizador: ' + (err.response?.data?.error?.message || err.message));
-    }
-  });
-
-  // Update User Mutation
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => api.put(`/users/${id}`, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      closeModal();
-      toast.success('Utilizador atualizado com sucesso!');
-    },
-    onError: (err) => {
-      toast.error('Erro ao atualizar utilizador: ' + (err.response?.data?.error?.message || err.message));
-    }
-  });
-
-  // Delete User Mutation
-  const deleteMutation = useMutation({
-    mutationFn: (id) => api.delete(`/users/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['users'] });
-      toast.success('Utilizador removido com sucesso!');
-    },
-    onError: (err) => {
-      toast.error('Erro ao remover utilizador: ' + (err.response?.data?.error?.message || err.message));
-    }
-  });
-
-  const openModal = (user = null) => {
-    if (user) {
-      setEditingUser(user);
-      setFormData({
-        username: user.username,
-        password: '', // leave empty when editing unless changing password
-        role: user.role,
-        curso_id: user.curso_id || 2
-      });
-    } else {
-      setEditingUser(null);
-      setFormData({
-        username: '',
-        password: '',
-        role: 'DIRETOR_CURSO',
-        curso_id: 2
-      });
-    }
-    setIsModalOpen(true);
-  };
-
-  const closeModal = () => {
-    setIsModalOpen(false);
-    setEditingUser(null);
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.username.trim()) {
-      toast.error('Por favor introduza o nome de utilizador.');
-      return;
-    }
-
-    if (!editingUser && !formData.password) {
-      toast.error('Por favor introduza uma palavra-passe.');
-      return;
-    }
-
-    const payload = {
-      username: formData.username.trim(),
-      role: formData.role,
-      curso_id: formData.role === 'ADMIN' ? null : parseInt(formData.curso_id)
-    };
-    
-    // Validate role is a valid enum value
-    if (!['ADMIN', 'DIRETOR_CURSO'].includes(payload.role)) {
-      toast.error('Função inválida. Por favor selecione uma opção válida.');
-      return;
-    }
-
-    if (formData.password) {
-      payload.password = formData.password;
-    }
-
-    if (editingUser) {
-      updateMutation.mutate({ id: editingUser.id, data: payload });
-    } else {
-      createMutation.mutate(payload);
-    }
-  };
-
-  const handleDelete = (id) => {
-    toast((t) => (
-      <div className="flex flex-col gap-3">
-        <p className="font-medium">Tem certeza que deseja remover este utilizador? Esta ação não pode ser desfeita.</p>
-        <div className="flex justify-end gap-2 mt-2">
-          <button onClick={() => toast.dismiss(t.id)} className="px-3 py-1.5 text-xs font-bold bg-secondary hover:bg-secondary/80 rounded-lg transition-colors border">Cancelar</button>
-          <button onClick={() => {
-            toast.dismiss(t.id);
-            deleteMutation.mutate(id);
-          }} className="px-3 py-1.5 text-xs font-bold bg-destructive hover:bg-destructive/90 text-white rounded-lg transition-colors shadow-sm">Sim, remover</button>
-        </div>
-      </div>
-    ), { duration: Infinity, style: { minWidth: '300px' } });
-  };
-
+  const {
+    users,
+    isLoading,
+    isModalOpen,
+    editingUser,
+    formData,
+    setFormData,
+    openModal,
+    closeModal,
+    handleSubmit,
+    handleDelete,
+    isPending
+  } = useUsuarios();
 
   const CURSOS_OPCOES = [
     { value: 2, label: "Director de Contabilidade e Auditoria", detail: "Gere: Contabilidade e Auditoria + Contabilidade e Administração Pública" },
@@ -330,10 +208,10 @@ const UsuariosPage = () => {
                 </button>
                 <button 
                   type="submit"
-                  disabled={createMutation.isPending || updateMutation.isPending}
+                  disabled={isPending}
                   className="px-6 py-2 rounded-xl bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors flex items-center gap-1.5 disabled:opacity-50"
                 >
-                  {createMutation.isPending || updateMutation.isPending ? (
+                  {isPending ? (
                     <Loader2 className="animate-spin" size={16} />
                   ) : (
                     <Save size={16} />
@@ -350,3 +228,4 @@ const UsuariosPage = () => {
 };
 
 export default UsuariosPage;
+
