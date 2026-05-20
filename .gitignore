@@ -40,6 +40,6 @@ out
 *.sln
 *.sw?
 
-# OS metadata
+# OS metadata sim
 .DS_Store
 Thumbs.db
