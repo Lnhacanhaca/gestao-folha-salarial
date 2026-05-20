@@ -1,4 +1,4 @@
-name: LNSOTECH Deploy & Backup
+name: SGFS Deploy & Backup
 
 on:
   push:
