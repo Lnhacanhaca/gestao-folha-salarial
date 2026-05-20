@@ -73,7 +73,7 @@ const Dashboard = () => {
   const [activeYear] = useState(() => new Date().getFullYear());
 
   const meses = [
-    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+    "Jan", "Fev", "Mar", "Abr", "Maio", "Jun",
     "Jul", "Ago", "Set", "Out", "Nov", "Dez"
   ];
 
