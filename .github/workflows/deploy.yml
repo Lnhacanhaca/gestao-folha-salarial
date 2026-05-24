@@ -3,6 +3,7 @@ name: SGFS Deploy & Backup
 on:
   push:
     branches: [main]
+  workflow_dispatch:   # <--- Adiciona "Run workflow" no GitHub
 
 jobs:
   deploy:
