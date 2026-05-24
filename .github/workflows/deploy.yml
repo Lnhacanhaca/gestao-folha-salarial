@@ -7,7 +7,39 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
+      # 1️⃣ Checkout do código
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2️⃣ Configurar chave SSH
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.5.4
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      # 3️⃣ Transferir arquivos (excluindo .git, node_modules, etc.)
+      - name: Sync files to VPS
+        uses: appleboy/scp-action@v0.1.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          source: "."
+          target: ${{ secrets.VPS_DEPLOY_PATH }}
+          # Excluir diretórios pesados que não são necessários no servidor
+          rm: true
+          # Ignore arquivos que não precisam ser enviados
+          exclude: |
+            .git*
+            node_modules
+            docker-compose.yml
+            docker-compose.prod.yml
+            .github
+            .gitignore
+            README.md
+
+      # 4️⃣ Executar comandos remotos no VPS
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -15,49 +47,27 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            cd /opt/apps/gestao-folha-salarial
-            git pull origin main
+            set -e   # aborta no primeiro erro
+            cd ${{ secrets.VPS_DEPLOY_PATH }}
 
-            # Build and start services using production compose file
-            docker compose -f docker-compose.prod.yml up -d --build
-
-            echo "✅ Deploy concluído com sucesso!"
-
-  backup:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    needs: deploy
-    steps:
-      - name: Backup Database via SSH
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            BACKUP_DIR="/opt/apps/gestao-folha-salarial/backups"
-            mkdir -p $BACKUP_DIR
-            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-
-            # Source environment variables from .env file on VPS
-            cd /opt/apps/gestao-folha-salarial
-            if [ -f .env ]; then
-              export $(grep -v '^#' .env | xargs)
+            # (Opcional) copiar .env do backup ou criar se não existir
+            if [ ! -f .env ]; then
+              echo "POSTGRES_USER=postgres" >> .env
+              echo "POSTGRES_PASSWORD=postgres_secure_pass" >> .env
+              echo "POSTGRES_DB=gestao_folha" >> .env
             fi
 
-            # Get database container ID from compose file
-            CONTAINER_ID=$(docker compose -f docker-compose.prod.yml ps -q postgres_db)
-            if [ -z "$CONTAINER_ID" ]; then
-              echo "❌ Erro: Serviço de banco de dados 'postgres_db' não encontrado"
-              exit 1
-            fi
+            # Escolher o compose correto
+            COMPOSE_FILE="${{ secrets.DOCKER_COMPOSE_FILE }}"
 
-            # Execute backup using environment variables
-            # The container uses POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB
-            # which are set from DB_USER, DB_PASSWORD, DB_NAME in .env
-            docker exec $CONTAINER_ID pg_dump -U $POSTGRES_USER $POSTGRES_DB > "$BACKUP_DIR/db_backup_$TIMESTAMP.sql"
+            # Parar containers atuais (se existirem) e remover imagens antigas
+            docker compose -f $COMPOSE_FILE down --remove-orphans
 
-            # Keep only the last 10 backups
-            ls -t $BACKUP_DIR/db_backup_*.sql | tail -n +11 | xargs -r rm 2>/dev/null || true
+            # Build + up em modo detached
+            docker compose -f $COMPOSE_FILE up -d --build
 
-            echo "✅ Backup concluído: db_backup_$TIMESTAMP.sql"
+            # Verificar health dos containers (exemplo simples)
+            docker compose -f $COMPOSE_FILE ps
+
+            # Reload do Nginx para garantir que a nova config seja lida
+            sudo systemctl reload nginx || sudo service nginx reload
