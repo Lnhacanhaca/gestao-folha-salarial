@@ -12,7 +12,7 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
-      # 1️⃣ Checkout do código
+      # 1️⃣ Checkout do código do SGFS
       - name: Checkout repository
         uses: actions/checkout@v6
 
