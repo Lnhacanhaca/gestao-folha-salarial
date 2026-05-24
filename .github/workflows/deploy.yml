@@ -50,11 +50,7 @@ jobs:
 
             # Cria .env com valores padrão caso ainda não exista
             if [ ! -f .env ]; then
-              cat <<EOF > .env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres_secure_pass
-POSTGRES_DB=gestao_folha
-EOF
+              printf "POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=postgres_secure_pass\nPOSTGRES_DB=gestao_folha\n" > .env
             fi
 
             COMPOSE_FILE="${{ secrets.DOCKER_COMPOSE_FILE }}"   # ex.: docker-compose.prod.yml
