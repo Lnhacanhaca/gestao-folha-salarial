@@ -19,7 +19,7 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
 
-      # 3️⃣ Transferir arquivos (excluindo .git, node_modules, etc.)
+      # 3️⃣ Transferir arquivos (excluindo apenas o que realmente não precisa)
       - name: Sync files to VPS
         uses: appleboy/scp-action@v0.1.5
         with:
@@ -27,17 +27,14 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           source: "."
           target: ${{ secrets.VPS_DEPLOY_PATH }}
-          # Excluir diretórios pesados que não são necessários no servidor
           rm: true
-          # Ignore arquivos que não precisam ser enviados
           exclude: |
             .git*
             node_modules
-            docker-compose.yml
-            docker-compose.prod.yml
             .github
             .gitignore
             README.md
+            # NÃO exclua docker‑compose.yml nem docker‑compose.prod.yml
 
       # 4️⃣ Executar comandos remotos no VPS
       - name: Deploy to VPS via SSH
@@ -47,27 +44,26 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            set -e   # aborta no primeiro erro
+            set -e                           # aborta no primeiro erro
             cd ${{ secrets.VPS_DEPLOY_PATH }}
 
-            # (Opcional) copiar .env do backup ou criar se não existir
+            # Cria .env com valores padrão caso ainda não exista
             if [ ! -f .env ]; then
-              echo "POSTGRES_USER=postgres" >> .env
-              echo "POSTGRES_PASSWORD=postgres_secure_pass" >> .env
-              echo "POSTGRES_DB=gestao_folha" >> .env
+              cat <<EOF > .env
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres_secure_pass
+POSTGRES_DB=gestao_folha
+EOF
             fi
 
-            # Escolher o compose correto
-            COMPOSE_FILE="${{ secrets.DOCKER_COMPOSE_FILE }}"
+            COMPOSE_FILE="${{ secrets.DOCKER_COMPOSE_FILE }}"   # ex.: docker-compose.prod.yml
 
-            # Parar containers atuais (se existirem) e remover imagens antigas
+            # Stop, clean old images, rebuild & start
             docker compose -f $COMPOSE_FILE down --remove-orphans
-
-            # Build + up em modo detached
             docker compose -f $COMPOSE_FILE up -d --build
 
-            # Verificar health dos containers (exemplo simples)
+            # Mostra status dos containers (servirá como verificação automática)
             docker compose -f $COMPOSE_FILE ps
 
-            # Reload do Nginx para garantir que a nova config seja lida
+            # Reload Nginx (root → sudo não gera senha)
             sudo systemctl reload nginx || sudo service nginx reload
