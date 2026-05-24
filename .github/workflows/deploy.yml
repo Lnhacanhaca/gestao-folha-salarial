@@ -3,7 +3,7 @@ name: SGFS Deploy & Backup
 on:
   push:
     branches: [main]
-  workflow_dispatch:   # <--- Adiciona "Run workflow" no GitHub
+  workflow_dispatch:   # <--- permite "Run workflow" no GitHub
 
 jobs:
   deploy:
@@ -45,7 +45,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
-            set -e                           # aborta no primeiro erro
+            set -e
             cd ${{ secrets.VPS_DEPLOY_PATH }}
 
             # Cria .env com valores padrão caso ainda não exista
