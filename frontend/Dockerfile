@@ -16,7 +16,7 @@ RUN npm ci
 COPY . .
 EXPOSE 5173
 # --host é obrigatório para o Vite responder a conexões de fora do container
-CMD ["npm", "run", "dev", "--", "--host"]
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 
 # --- Estágio 3: Produção ---
 FROM nginx:alpine AS production
