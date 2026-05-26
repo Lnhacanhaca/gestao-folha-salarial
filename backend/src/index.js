@@ -26,6 +26,7 @@ class App {
   setupModules() {
     // Modules will be registered here
     this.app.get('/health', (req, res) => res.json({ status: 'ok', version: '1.0.0' }));
+    this.app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '1.0.0' }));
     
     // Auth Module
     const authRoutes = require('./modules/auth/auth.routes');
