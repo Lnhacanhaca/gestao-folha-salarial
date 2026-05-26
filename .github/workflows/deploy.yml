@@ -1,68 +1,46 @@
-name: SGFS Deploy & Backup
+name: Build & Deploy (Container Registry)
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:   # <--- permite "Run workflow" no GitHub
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
+      IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
     steps:
-      # 1️⃣ Checkout do código do SGFS
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      # 2️⃣ Configurar chave SSH
-      - name: Set up SSH key
-        uses: webfactory/ssh-agent@v0.10.0
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
-          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 3️⃣ Transferir arquivos (excluindo apenas o que realmente não precisa)
-      - name: Sync files to VPS
-        uses: appleboy/scp-action@v0.1.5
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          source: "."
-          target: ${{ secrets.VPS_DEPLOY_PATH }}
-          rm: true
-          exclude: |
-            .git*
-            node_modules
-            .github
-            .gitignore
-            README.md
-            # NÃO exclua docker‑compose.yml nem docker‑compose.prod.yml
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
-      # 4️⃣ Executar comandos remotos no VPS
-      - name: Deploy to VPS via SSH
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Write deployment tag file
+        run: echo "${{ github.sha }}" > DEPLOY_TAG.txt
+
+      - name: Upload DEPLOY_TAG artifact
+        uses: actions/upload-artifact@v4
         with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            set -e
-            cd ${{ secrets.VPS_DEPLOY_PATH }}
-
-            # Cria .env com valores padrão caso ainda não exista
-            if [ ! -f .env ]; then
-              printf "POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=postgres_secure_pass\nPOSTGRES_DB=gestao_folha\n" > .env
-            fi
-
-            COMPOSE_FILE="${{ secrets.DOCKER_COMPOSE_FILE }}"   # ex.: docker-compose.prod.yml
-
-            # Stop, clean old images, rebuild & start
-            docker compose -f $COMPOSE_FILE down --remove-orphans
-            docker compose -f $COMPOSE_FILE up -d --build
-
-            # Mostra status dos containers (servirá como verificação automática)
-            docker compose -f $COMPOSE_FILE ps
-
-            # Reload Nginx (root → sudo não gera senha)
-            sudo systemctl reload nginx || sudo service nginx reload
+          name: deploy-tag
+          path: DEPLOY_TAG.txt
