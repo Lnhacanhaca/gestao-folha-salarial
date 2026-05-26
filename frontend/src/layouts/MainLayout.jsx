@@ -11,7 +11,8 @@ import {
   X,
   User,
   ShieldAlert,
-  ChevronRight
+  ChevronRight,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clsx } from 'clsx';
@@ -55,6 +56,7 @@ const MainLayout = () => {
   if (user?.role === 'ADMIN') {
     menuItems.push({ to: "/usuarios", icon: UserCog, label: "Utilizadores" });
     menuItems.push({ to: "/auditoria", icon: ShieldAlert, label: "Auditoria" });
+    menuItems.push({ to: "/configuracoes", icon: Settings, label: "Configurações" });
   }
 
   const handleLogout = () => {
@@ -70,6 +72,7 @@ const MainLayout = () => {
       case '/relatorios': return 'Relatórios';
       case '/usuarios': return 'Utilizadores';
       case '/auditoria': return 'Histórico e Auditoria';
+      case '/configuracoes': return 'Configurações do Sistema';
       default: return 'Página';
     }
   };

@@ -11,6 +11,7 @@ import LancarNotasPage from './pages/LancarNotasPage';
 import RelatoriosPage from './pages/RelatoriosPage';
 import UsuariosPage from './pages/UsuariosPage';
 import AuditPage from './pages/AuditPage';
+import SettingsPage from './pages/SettingsPage';
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,11 @@ function AppRoutes() {
         <Route path="auditoria" element={
           <ProtectedRoute roles={['ADMIN']}>
             <AuditPage />
+          </ProtectedRoute>
+        } />
+        <Route path="configuracoes" element={
+          <ProtectedRoute roles={['ADMIN']}>
+            <SettingsPage />
           </ProtectedRoute>
         } />
       </Route>
