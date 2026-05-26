@@ -1,63 +1,72 @@
-version: '3.8'
-
+# (o conteúdo completo já está pronto; basta salvar sem a linha 1 “version: …”)
 services:
-  postgres_db:
-    image: postgres:15-alpine
-    container_name: sgfs_postgres_db
-    restart: unless-stopped
+  nginx-proxy-manager:
+    image: 'jc21/nginx-proxy-manager:latest'
+    container_name: nginx-proxy-manager
+    restart: always
     ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_secure_pass}
-      POSTGRES_DB: ${DB_NAME:-gestao_folha}
+      - "80:80"
+      - "443:443"
+      - "81:81"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-gestao_folha}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - ./data:/data
+      - ./letsencrypt:/etc/letsencrypt
+    networks:
+      - lnso_network
+
+  frontend:
+    container_name: sgfs_frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: "http://localhost:3001/api"
+    networks:
+      - lnso_network
+    restart: unless-stopped
 
   backend:
+    container_name: sgfs_backend
     build:
       context: ./backend
       dockerfile: Dockerfile
       target: development
-    container_name: sgfs_backend
-    restart: unless-stopped
     ports:
       - "3001:3001"
     environment:
       PORT: 3001
       NODE_ENV: development
       JWT_SECRET: ${JWT_SECRET:-sgfs_premium_secret_2026}
-      # Conecta diretamente usando o hostname do container de banco de dados 'postgres_db'
       DATABASE_URL: postgres://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_secure_pass}@postgres_db:5432/${DB_NAME:-gestao_folha}
     volumes:
       - ./backend:/app
       - /app/node_modules
     command: npm run dev
     depends_on:
-      postgres_db:
-        condition: service_healthy
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: development
-    container_name: sgfs_frontend
+      - postgres_db
+    networks:
+      - lnso_network
     restart: unless-stopped
-    ports:
-      - "5173:5173"
+
+  postgres_db:
+    container_name: sgfs_postgres_db
+    image: postgres:15-alpine
     environment:
-      VITE_API_URL: http://localhost:3001/api
+      POSTGRES_DB: gestao_folha
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_secure_pass}
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    depends_on:
-      - backend
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - lnso_network
+    restart: unless-stopped
+
+networks:
+  lnso_network:
+    external: true
 
 volumes:
   postgres_data:
