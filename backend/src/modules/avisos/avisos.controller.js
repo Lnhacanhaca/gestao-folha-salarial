@@ -14,12 +14,13 @@ const create = async (req, res, next) => {
   try {
     const { mensagem, ativo = true } = req.body;
     
-    const [inserted] = await db('avisos').insert({
+    let [inserted] = await db('avisos').insert({
       mensagem,
       ativo
-    });
+    }).returning('id');
 
-    const aviso = await db('avisos').where({ id: inserted || null }).first();
+    const id = typeof inserted === 'object' ? inserted.id : inserted;
+    const aviso = await db('avisos').where({ id: id || null }).first();
 
     await logAction({
       userId: req.user.id,
