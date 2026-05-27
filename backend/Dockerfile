@@ -2,8 +2,8 @@
 FROM node:20-alpine AS development
 WORKDIR /app
 
-# Instala ferramentas necessárias para compilar pacotes nativos (C++) e postgresql-client para backups
-RUN apk add --no-cache python3 make g++ postgresql-client
+# Instala ferramentas necessárias para compilar pacotes nativos (C++)
+RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
 # Instala TODAS as dependências (incluindo devDependencies como nodemon)
@@ -19,8 +19,8 @@ FROM node:20-alpine AS production
 WORKDIR /app
 
 COPY package*.json ./
-# Instala estritamente apenas dependências de produção e o postgresql-client
-RUN apk add --no-cache python3 make g++ postgresql-client && \
+# Instala estritamente apenas dependências de produção para manter a imagem leve
+RUN apk add --no-cache python3 make g++ && \
     npm ci --only=production && \
     apk del python3 make g++
 

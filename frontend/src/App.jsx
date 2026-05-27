@@ -11,7 +11,7 @@ import LancarNotasPage from './pages/LancarNotasPage';
 import RelatoriosPage from './pages/RelatoriosPage';
 import UsuariosPage from './pages/UsuariosPage';
 import AuditPage from './pages/AuditPage';
-import SettingsPage from './pages/SettingsPage';
+import AdminConfigPage from './pages/AdminConfigPage';
 
 const queryClient = new QueryClient();
 
@@ -61,7 +61,7 @@ function AppRoutes() {
         } />
         <Route path="configuracoes" element={
           <ProtectedRoute roles={['ADMIN']}>
-            <SettingsPage />
+            <AdminConfigPage />
           </ProtectedRoute>
         } />
       </Route>
@@ -71,6 +71,38 @@ function AppRoutes() {
 
 function App() {
   const initialRoute = sessionStorage.getItem('lastRoute') || '/';
+
+  useEffect(() => {
+    // Apply theme mode (Dark mode)
+    const savedMode = localStorage.getItem('themeMode') || 'light';
+    if (savedMode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+
+    // Apply theme color
+    const savedColor = localStorage.getItem('themeColor') || 'blue';
+    const root = document.documentElement;
+    switch (savedColor) {
+      case 'green':
+        root.style.setProperty('--primary', '142 70% 45%');
+        break;
+      case 'purple':
+        root.style.setProperty('--primary', '271 76% 53%');
+        break;
+      case 'orange':
+        root.style.setProperty('--primary', '24 95% 53%');
+        break;
+      case 'pink':
+        root.style.setProperty('--primary', '326 100% 60%');
+        break;
+      case 'blue':
+      default:
+        root.style.setProperty('--primary', '207 90% 54%');
+        break;
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

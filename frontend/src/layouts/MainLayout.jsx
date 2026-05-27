@@ -72,7 +72,7 @@ const MainLayout = () => {
       case '/relatorios': return 'Relatórios';
       case '/usuarios': return 'Utilizadores';
       case '/auditoria': return 'Histórico e Auditoria';
-      case '/configuracoes': return 'Configurações do Sistema';
+      case '/configuracoes': return 'Configurações';
       default: return 'Página';
     }
   };
