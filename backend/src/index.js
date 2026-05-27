@@ -28,23 +28,33 @@ class App {
     this.app.get('/health', (req, res) => res.json({ status: 'ok', version: '1.0.0' }));
     this.app.get('/api/health', (req, res) => res.json({ status: 'ok', version: '1.0.0' }));
     
+    // Auth Module
     const authRoutes = require('./modules/auth/auth.routes');
-    const usersRoutes = require('./modules/users/users.routes');
-    const docentesRoutes = require('./modules/docentes/docente.routes');
-    const folhasRoutes = require('./modules/folhas/folha.routes');
-    const auditRoutes = require('./modules/audit/audit.routes');
-    const avisosRoutes = require('./modules/avisos/avisos.routes');
-    const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
-    const settingsRoutes = require('./modules/settings/settings.routes');
-
     this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/users', usersRoutes);
-    this.app.use('/api/docentes', docentesRoutes);
-    this.app.use('/api/folhas', folhasRoutes);
+
+    // Users Module
+    const userRoutes = require('./modules/users/users.routes');
+    this.app.use('/api/users', userRoutes);
+
+    // Docentes Module
+    const docenteRoutes = require('./modules/docentes/docente.routes');
+    this.app.use('/api/docentes', docenteRoutes);
+
+    // Folhas Module
+    const folhaRoutes = require('./modules/folhas/folha.routes');
+    this.app.use('/api/folhas', folhaRoutes);
+
+    // Audit Module
+    const auditRoutes = require('./modules/audit/audit.routes');
     this.app.use('/api/audit', auditRoutes);
+
+    // Avisos Module
+    const avisosRoutes = require('./modules/avisos/avisos.routes');
     this.app.use('/api/avisos', avisosRoutes);
-    this.app.use('/api/dashboard', dashboardRoutes);
-    this.app.use('/api/settings', settingsRoutes);
+
+    // Admin Module (Config/Backup/Restore)
+    const adminRoutes = require('./modules/admin/admin.routes');
+    this.app.use('/api/admin', adminRoutes);
   }
 
   setupErrorHandling() {
