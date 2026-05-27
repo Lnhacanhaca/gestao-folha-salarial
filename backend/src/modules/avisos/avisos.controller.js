@@ -14,13 +14,22 @@ const create = async (req, res, next) => {
   try {
     const { mensagem, ativo = true } = req.body;
     
-    let [inserted] = await db('avisos').insert({
-      mensagem,
-      ativo
-    }).returning('id');
-
-    const id = typeof inserted === 'object' ? inserted.id : inserted;
-    const aviso = await db('avisos').where({ id: id || null }).first();
+    const isPostgres = db.client.config.client === 'pg';
+    let aviso;
+    
+    if (isPostgres) {
+      const [inserted] = await db('avisos').insert({
+        mensagem,
+        ativo
+      }).returning('*');
+      aviso = inserted;
+    } else {
+      const [insertedId] = await db('avisos').insert({
+        mensagem,
+        ativo
+      });
+      aviso = await db('avisos').where({ id: insertedId || null }).first();
+    }
 
     await logAction({
       userId: req.user.id,

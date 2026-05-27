@@ -38,8 +38,24 @@ const create = async (req, res, next) => {
       return res.status(200).json(updated);
     }
 
-    const [insertedId] = await db('docentes').insert({ nome: nome.trim(), categoria, cursos: cursosStr });
-    const docente = await db('docentes').where({ id: insertedId || null }).orWhere({ nome: nome.trim() }).first();
+    const isPostgres = db.client.config.client === 'pg';
+    let docente;
+    
+    if (isPostgres) {
+      const [inserted] = await db('docentes').insert({
+        nome: nome.trim(),
+        categoria,
+        cursos: cursosStr
+      }).returning('*');
+      docente = inserted;
+    } else {
+      const [insertedId] = await db('docentes').insert({
+        nome: nome.trim(),
+        categoria,
+        cursos: cursosStr
+      });
+      docente = await db('docentes').where({ id: insertedId || null }).orWhere({ nome: nome.trim() }).first();
+    }
 
     await logAction({
       userId: req.user.id,
