@@ -244,3 +244,196 @@ Esta seção consolida e mapeia formalmente todos os **Requisitos Funcionais (RF
 | **RN-03** | Abrangência por Curso | Diretores de Curso só podem visualizar, cadastrar e editar docentes e lançar horas pertencentes aos seus cursos geridos. | 🚫 **Bloqueio Total** |
 | **RN-04** | Modo Vigia Integrado | Ao ativar o "Modo Vigias", as horas semanais de VP e VD substituem as de AP e AD, e os totais de vigias são incluídos nos relatórios gerais. | Exibição |
 | **RN-05** | Confidencialidade de Faltas | O indicador de "Previsão de Faltas" individual é de caráter meramente informativo e orientativo, não devendo constar na folha geral ou relatórios. | Omissão |
+
+---
+
+## 📐 8. Modelagem UML e Diagramas Técnicos (Exceções de Prazos)
+
+Abaixo está detalhada a modelagem visual completa baseada em UML para a funcionalidade de gerenciamento de prazos sob demanda, documentando a arquitetura através de diagramas **Mermaid**.
+
+---
+
+### 1. Diagrama de Casos de Uso (Use Case Diagram)
+
+Descreve as interações dos atores (Administrador e Diretor de Curso) com a funcionalidade de controle de períodos e exceções no SGFS.
+
+```mermaid
+graph TD
+    admin((Administrador))
+    diretor((Diretor de Curso))
+
+    subgraph Casos de Uso SGFS
+        uc_login(Autenticar no SGFS)
+        uc_excecao(Configurar Exceção de Prazo)
+        uc_listar_exc(Visualizar Histórico de Exceções)
+        uc_del_exc(Revogar Exceção de Prazo)
+        uc_backup(Realizar Backup/Restauro)
+        
+        uc_lancar(Lançar Horas Semanais)
+        uc_vigia(Lançar Vigias de Exames)
+        uc_cons_exc(Consultar Exceção Ativa)
+        uc_relatorios(Visualizar Relatórios e Folhas)
+    end
+
+    admin --> uc_login
+    admin --> uc_excecao
+    admin --> uc_listar_exc
+    admin --> uc_del_exc
+    admin --> uc_backup
+
+    diretor --> uc_login
+    diretor --> uc_lancar
+    diretor --> uc_vigia
+    diretor --> uc_cons_exc
+    diretor --> uc_relatorios
+
+    uc_excecao -.->|includes| uc_login
+    uc_lancar -.->|includes| uc_login
+```
+
+---
+
+### 2. Diagrama de Classes (Class Diagram)
+
+Apresenta a modelagem relacional dos dados associados às exceções, histórico de auditoria e sua correlação com as tabelas fundamentais de folhas do SGFS.
+
+```mermaid
+classDiagram
+    direction TB
+    class User {
+        +int id
+        +string username
+        +string password
+        +string role
+        +int curso_id
+        +timestamps()
+    }
+    class Docente {
+        +int id
+        +string nome
+        +string categoria
+        +timestamps()
+    }
+    class Folha {
+        +int id
+        +int docente_id
+        +int curso_id
+        +int mes
+        +int ano
+        +float total_ap
+        +float total_ad
+        +float total_vp
+        +float total_vd
+        +float valor_receber
+        +boolean retificada
+        +string observacoes
+        +timestamps()
+    }
+    class FolhaDetalhe {
+        +int id
+        +int folha_id
+        +int semana
+        +float ap
+        +float ad
+        +float vp
+        +float vd
+    }
+    class ExcecaoPrazo {
+        +int id
+        +int curso_id
+        +int mes
+        +int ano
+        +datetime data_limite
+        +string motivo
+        +timestamp created_at
+    }
+    class AuditLog {
+        +int id
+        +int user_id
+        +string username
+        +string action
+        +string target_type
+        +string target_id
+        +text details
+        +timestamp created_at
+    }
+
+    User "1" --> "0..*" AuditLog : gera
+    Docente "1" --> "0..*" Folha : leciona
+    Folha "1" *-- "5" FolhaDetalhe : possui
+    User "1" --> "0..*" ExcecaoPrazo : autoriza (via audit_logs)
+```
+
+---
+
+### 3. Diagrama de Sequência (Sequence Diagram)
+
+Demonstra a troca de mensagens entre o navegador (Frontend) e o servidor (Backend API) durante o fluxo de verificação de prazo e persistência de horas por um Diretor sob regime de exceção ativa.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Diretor as Diretor de Curso
+    participant FE as Frontend (LancarNotasPage)
+    participant BE as Backend (FolhasController)
+    participant DB as Base de Dados (SQL)
+
+    Diretor->>FE: Seleciona Curso, Mês e Ano de referência
+    FE->>BE: GET /api/folhas/excecao-ativa?curso_id=X&mes=Y&ano=Z
+    BE->>DB: SELECT * FROM excecoes_prazos WHERE curso_id=X AND mes=Y AND ano=Z AND data_limite >= agora
+    DB-->>BE: Retorna registo da exceção (se houver)
+    BE-->>FE: HTTP 200 { ativa: true, excecao: { ... } }
+    Note over FE: Frontend define isReadOnly = false<br/>e exibe Banner Verde de Exceção Ativa
+    FE-->>Diretor: Habilita campos e exibe prazo limite da exceção
+    
+    Diretor->>FE: Preenche dados e clica em "Gravar Dados"
+    FE->>BE: POST /api/folhas/importar (dados da folha)
+    BE->>DB: Query de verificação de exceção ativa
+    DB-->>BE: Confirma exceção ativa
+    Note over BE: Valida permissão de escrita<br/>mesmo fora do prazo de 1 a 15
+    BE->>DB: INSERT/UPDATE folhas & folha_detalhes
+    DB-->>BE: Confirmação de persistência
+    BE-->>FE: HTTP 200 { message: 'Dados salvos com sucesso!' }
+    FE-->>Diretor: Exibe toast de sucesso
+```
+
+---
+
+### 4. Diagrama de Atividades (Activity Diagram)
+
+Ilustra o fluxo lógico de decisão percorrido pelo backend para validar ou rejeitar uma requisição de gravação de horas com base na verificação temporal de prazos regulares ou exceções administrativas.
+
+```mermaid
+stateDiagram-v2
+    [*] --> RecebeRequisicaoEscrita
+    state RecebeRequisicaoEscrita {
+        [*] --> VerificarPerfil
+        VerificarPerfil --> PerfilAdmin : Perfil == ADMIN
+        VerificarPerfil --> PerfilDiretor : Perfil == DIRETOR_CURSO
+        
+        PerfilAdmin --> PermitirGravacao
+        
+        PerfilDiretor --> VerificarCurso : Curso selecionado == Curso gerido pelo Diretor?
+        VerificarCurso --> CursoInvalido : Não
+        VerificarCurso --> CursoValido : Sim
+        
+        CursoInvalido --> RetornarErro403 : Erro de Permissão
+        
+        CursoValido --> VerificarPrazoRegular : Dia atual está entre 1 e 15 do mês seguinte?
+        VerificarPrazoRegular --> PrazoRegularAberto : Sim
+        VerificarPrazoRegular --> PrazoRegularFechado : Não
+        
+        PrazoRegularAberto --> PermitirGravacao
+        
+        PrazoRegularFechado --> VerificarExcecaoAtiva : Existe exceção cadastrada onde data_limite >= agora?
+        VerificarExcecaoAtiva --> ExcecaoAtiva : Sim
+        VerificarExcecaoAtiva --> ExcecaoInexistente : Não
+        
+        ExcecaoAtiva --> PermitirGravacao
+        ExcecaoInexistente --> RetornarErro403
+    }
+    
+    PermitirGravacao --> [*]
+    RetornarErro403 --> [*]
+```
+
