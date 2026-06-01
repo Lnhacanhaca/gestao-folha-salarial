@@ -1,12 +1,34 @@
 const db = require('../../config/database');
 const { logAction } = require('../../shared/utils/auditLogger');
 
+const isLaunchWindowOpen = (targetMes, targetAno) => {
+  const now = new Date();
+  const curDay = now.getDate();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+
+  // Determine superior month and year
+  let supMonth = Number(targetMes) + 1;
+  let supYear = Number(targetAno);
+  if (supMonth === 13) {
+    supMonth = 1;
+    supYear = Number(targetAno) + 1;
+  }
+
+  return curYear === supYear && curMonth === supMonth && curDay >= 1 && curDay <= 15;
+};
+
 const importar = async (req, res, next) => {
   const { mes, ano, curso_id, dados } = req.body;
   
   if (parseInt(curso_id) === 1) {
     return res.status(400).json({ error: 'Não é permitido fazer lançamentos directos na vista Geral Consolidada.' });
   }
+
+  if (req.user.role !== 'ADMIN' && !isLaunchWindowOpen(mes, ano)) {
+    return res.status(403).json({ error: 'Erro de permissão: O período de lançamento para este mês de referência está fechado para diretores de curso (permitido apenas de 1 a 15 do mês seguinte).' });
+  }
+
 
   // Validate inputs
   if (dados && Array.isArray(dados)) {
@@ -15,7 +37,9 @@ const importar = async (req, res, next) => {
         for (const s of item.semanas) {
           const apVal = parseFloat(s.ap) || 0;
           const adVal = parseFloat(s.ad) || 0;
-          if (apVal < 0 || adVal < 0) {
+          const vpVal = parseFloat(s.vp) || 0;
+          const vdVal = parseFloat(s.vd) || 0;
+          if (apVal < 0 || adVal < 0 || vpVal < 0 || vdVal < 0) {
             return res.status(400).json({ error: 'As horas não podem ser valores negativos.' });
           }
           if (adVal > apVal) {
@@ -43,7 +67,9 @@ const importar = async (req, res, next) => {
       // Calculate Totals
       const total_ap = item.semanas.reduce((acc, s) => acc + (parseFloat(s.ap) || 0), 0);
       const total_ad = item.semanas.reduce((acc, s) => acc + (parseFloat(s.ad) || 0), 0);
-      const valor_receber = total_ad * 500;
+      const total_vp = item.semanas.reduce((acc, s) => acc + (parseFloat(s.vp) || 0), 0);
+      const total_vd = item.semanas.reduce((acc, s) => acc + (parseFloat(s.vd) || 0), 0);
+      const valor_receber = (total_ad + total_vd) * 500;
 
       // Upsert Folha
       let folha = await trx('folhas')
@@ -54,6 +80,8 @@ const importar = async (req, res, next) => {
         await trx('folhas').where({ id: folha.id }).update({
           total_ap,
           total_ad,
+          total_vp,
+          total_vd,
           valor_receber,
           retificada: item.retificada ? 1 : 0,
           observacoes: item.observacoes || null,
@@ -69,6 +97,8 @@ const importar = async (req, res, next) => {
           ano,
           total_ap,
           total_ad,
+          total_vp,
+          total_vd,
           valor_receber,
           retificada: item.retificada ? 1 : 0,
           observacoes: item.observacoes || null
@@ -76,12 +106,13 @@ const importar = async (req, res, next) => {
         folha = await trx('folhas').where({ id: insertedFolhaId }).first();
       }
 
-      // Insert Details
       const detalhes = item.semanas.map(s => ({
         folha_id: folha.id,
         semana: s.semana,
         ap: s.ap,
-        ad: s.ad
+        ad: s.ad,
+        vp: s.vp || 0,
+        vd: s.vd || 0
       }));
 
       await trx('folha_detalhes').insert(detalhes);
@@ -179,11 +210,11 @@ const getByCurso = async (req, res, next) => {
 
       // Weeks initialization
       const semanas = [
-        { semana: 1, ap: 0, ad: 0 },
-        { semana: 2, ap: 0, ad: 0 },
-        { semana: 3, ap: 0, ad: 0 },
-        { semana: 4, ap: 0, ad: 0 },
-        { semana: 5, ap: 0, ad: 0 }
+        { semana: 1, ap: 0, ad: 0, vp: 0, vd: 0 },
+        { semana: 2, ap: 0, ad: 0, vp: 0, vd: 0 },
+        { semana: 3, ap: 0, ad: 0, vp: 0, vd: 0 },
+        { semana: 4, ap: 0, ad: 0, vp: 0, vd: 0 },
+        { semana: 5, ap: 0, ad: 0, vp: 0, vd: 0 }
       ];
 
       let retificada = 0;
@@ -205,6 +236,8 @@ const getByCurso = async (req, res, next) => {
               if (idx >= 0 && idx < 5) {
                 semanas[idx].ap += parseFloat(d.ap) || 0;
                 semanas[idx].ad += parseFloat(d.ad) || 0;
+                semanas[idx].vp += parseFloat(d.vp) || 0;
+                semanas[idx].vd += parseFloat(d.vd) || 0;
               }
             });
           } else {
@@ -250,12 +283,16 @@ const getByCurso = async (req, res, next) => {
       // Recalculate totals
       const total_ap = semanas.reduce((acc, s) => acc + s.ap, 0);
       const total_ad = semanas.reduce((acc, s) => acc + s.ad, 0);
-      const valor_receber = total_ad * 500;
+      const total_vp = semanas.reduce((acc, s) => acc + s.vp, 0);
+      const total_vd = semanas.reduce((acc, s) => acc + s.vd, 0);
+      const valor_receber = (total_ad + total_vd) * 500;
 
       return {
         docente_nome: doc.nome,
         total_ap,
         total_ad,
+        total_vp,
+        total_vd,
         valor_receber,
         retificada,
         observacoes: observacoes.length > 0 ? observacoes.join('; ') : null,
@@ -317,11 +354,11 @@ const getGeral = async (req, res, next) => {
 
       // Weeks initialization
       const semanas = [
-        { semana: 1, ap: 0, ad: 0 },
-        { semana: 2, ap: 0, ad: 0 },
-        { semana: 3, ap: 0, ad: 0 },
-        { semana: 4, ap: 0, ad: 0 },
-        { semana: 5, ap: 0, ad: 0 }
+        { semana: 1, ap: 0, ad: 0, vp: 0, vd: 0 },
+        { semana: 2, ap: 0, ad: 0, vp: 0, vd: 0 },
+        { semana: 3, ap: 0, ad: 0, vp: 0, vd: 0 },
+        { semana: 4, ap: 0, ad: 0, vp: 0, vd: 0 },
+        { semana: 5, ap: 0, ad: 0, vp: 0, vd: 0 }
       ];
 
       // Loop through all course IDs that the teacher teaches in the active semester
@@ -338,6 +375,8 @@ const getGeral = async (req, res, next) => {
               if (idx >= 0 && idx < 5) {
                 semanas[idx].ap += parseFloat(d.ap) || 0;
                 semanas[idx].ad += parseFloat(d.ad) || 0;
+                semanas[idx].vp += parseFloat(d.vp) || 0;
+                semanas[idx].vd += parseFloat(d.vd) || 0;
               }
             });
           } else {
@@ -383,12 +422,16 @@ const getGeral = async (req, res, next) => {
       // Recalculate totals
       const total_ap = semanas.reduce((acc, s) => acc + s.ap, 0);
       const computed_total_ad = semanas.reduce((acc, s) => acc + s.ad, 0);
-      const valor_receber = computed_total_ad * 500;
+      const computed_total_vp = semanas.reduce((acc, s) => acc + s.vp, 0);
+      const computed_total_vd = semanas.reduce((acc, s) => acc + s.vd, 0);
+      const valor_receber = (computed_total_ad + computed_total_vd) * 500;
 
       return {
         docente_nome: doc.nome,
         total_ap,
         total_ad: computed_total_ad,
+        total_vp: computed_total_vp,
+        total_vd: computed_total_vd,
         valor_receber,
         retificada,
         observacoes: observacoes.length > 0 ? observacoes.join('; ') : null,
@@ -403,11 +446,15 @@ const getGeral = async (req, res, next) => {
 };
 
 const deletarDocenteFolha = async (req, res, next) => {
+  const { curso_id, docente_nome } = req.body;
+  const { mes, ano } = req.query;
+
+  if (req.user.role !== 'ADMIN' && !isLaunchWindowOpen(mes, ano)) {
+    return res.status(403).json({ error: 'Erro de permissão: O período de modificação/exclusão para este mês de referência está fechado para diretores de curso (permitido apenas de 1 a 15 do mês seguinte).' });
+  }
+
   const trx = await db.transaction();
   try {
-    const { curso_id, docente_nome } = req.body;
-    const { mes, ano } = req.query;
-
     const trimmedNome = docente_nome.trim();
     const docente = await trx('docentes')
       .whereRaw('LOWER(nome) = ?', [trimmedNome.toLowerCase()])

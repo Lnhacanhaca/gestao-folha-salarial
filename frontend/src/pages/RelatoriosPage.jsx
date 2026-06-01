@@ -62,10 +62,18 @@ const RelatoriosPage = () => {
   });
   const [dados, setDados] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [viewMode, setViewMode] = useState('folha'); // 'folha' or 'oficio'
+  const [viewMode, setViewMode] = useState('folha'); // 'folha', 'oficio' or 'falha'
+  const [showVigias, setShowVigias] = useState(() => localStorage.getItem('sgfs_show_vigias') === 'true');
+
+
+
+  const [falhaModalOpen, setFalhaModalOpen] = useState(false);
+  const [falhaDocenteIdx, setFalhaDocenteIdx] = useState('');
+  const [falhaJustificacao, setFalhaJustificacao] = useState('O docente submeteu a folha de presenças fora do prazo estabelecido. Solicita-se a aprovação e o respectivo pagamento das horas listadas abaixo.');
 
   const totalGeralAd = dados.reduce((acc, r) => acc + (r.total_ad || 0), 0);
-  const valorTotalMts = totalGeralAd * 500;
+  const totalGeralVd = dados.reduce((acc, r) => acc + (r.total_vd || 0), 0);
+  const valorTotalMts = (totalGeralAd + totalGeralVd) * 500;
   const valorExtenso = numeroPorExtenso(valorTotalMts);
 
   const meses = [
@@ -104,6 +112,36 @@ const RelatoriosPage = () => {
   }, [cursoId]);
 
   const weekRanges = getWeeksDateRanges(mes, ano);
+
+  const renderProgramadasCell = (ap, vp) => {
+    if (!showVigias) return ap || 0;
+    if (ap > 0 && vp > 0) {
+      return (
+        <div className="flex flex-col text-[9px] leading-tight py-0.5">
+          <span>AP: {ap}</span>
+          <span className="text-slate-500 font-normal">VP: {vp}</span>
+        </div>
+      );
+    }
+    if (vp > 0) return `VP: ${vp}`;
+    if (ap > 0) return `AP: ${ap}`;
+    return 0;
+  };
+
+  const renderDadasCell = (ad, vd) => {
+    if (!showVigias) return ad || 0;
+    if (ad > 0 && vd > 0) {
+      return (
+        <div className="flex flex-col text-[9px] leading-tight py-0.5 font-bold">
+          <span className="text-primary">AD: {ad}</span>
+          <span className="text-amber-600">VD: {vd}</span>
+        </div>
+      );
+    }
+    if (vd > 0) return <span className="text-amber-600 font-bold">VD: {vd}</span>;
+    if (ad > 0) return <span className="text-primary font-bold">AD: {ad}</span>;
+    return 0;
+  };
 
   return (
     <div className="space-y-6">
@@ -242,11 +280,23 @@ const RelatoriosPage = () => {
             <Printer size={18} />
             Imprimir Folha
           </button>
+          {cursoId !== 1 && dados.length > 0 && (
+            <button 
+              onClick={() => {
+                setFalhaDocenteIdx(0);
+                setFalhaModalOpen(true);
+              }}
+              className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-5 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-sm w-full sm:w-auto border border-amber-300"
+            >
+              <FileText size={18} />
+              Justificação Individual (Atraso)
+            </button>
+          )}
         </div>
       </div>
 
       {/* Selectors - No Print */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 bg-card p-6 rounded-2xl border shadow-sm no-print">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-card p-6 rounded-2xl border shadow-sm no-print items-end">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-muted-foreground">Mês</label>
           <select 
@@ -268,7 +318,7 @@ const RelatoriosPage = () => {
             className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 font-medium"
           />
         </div>
-        <div className="space-y-2 sm:col-span-2 md:col-span-1">
+        <div className="space-y-2">
           <label className="text-sm font-semibold text-muted-foreground">Curso</label>
           <select 
             value={cursoId} 
@@ -289,6 +339,20 @@ const RelatoriosPage = () => {
               }
             })()}
           </select>
+        </div>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 bg-background border rounded-xl p-2.5 h-[46px] cursor-pointer select-none">
+            <input 
+              type="checkbox" 
+              checked={showVigias}
+              onChange={(e) => {
+                setShowVigias(e.target.checked);
+                localStorage.setItem('sgfs_show_vigias', e.target.checked ? 'true' : 'false');
+              }}
+              className="rounded text-amber-600 focus:ring-amber-500 h-4 w-4 cursor-pointer"
+            />
+            <span className="text-xs font-bold text-amber-800">Exibir Vigias (Modo Exames)</span>
+          </label>
         </div>
       </div>
 
@@ -352,7 +416,7 @@ const RelatoriosPage = () => {
 
       {/* Report Sheet - Print Ready */}
       {viewMode === 'folha' && (
-        <div className="bg-white text-black p-4 sm:p-8 border-0 shadow-none min-h-[1000px] print:p-0 print:border-0 print:shadow-none w-full overflow-x-auto">
+        <div className="bg-white text-black p-4 sm:p-8 border-0 shadow-none min-h-[1000px] print:p-0 print:border-0 print:shadow-none w-full">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-2">
               <img src="/logo.png" alt="Instituto Superior Politécnico de Tete" className="h-16 object-contain" />
@@ -382,8 +446,10 @@ const RelatoriosPage = () => {
                       <th rowSpan={3} className="p-1.5 border-2 border-black w-8">Nº</th>
                       <th rowSpan={3} className="p-1.5 border-2 border-black w-56 text-left">Docentes</th>
                       <th colSpan={10} className="p-1.5 border-2 border-black">Aulas Mensais</th>
-                      <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Total de Horas</th>
-                      <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Valor a Receber das Aulas</th>
+                      <th colSpan={showVigias ? 4 : 2} rowSpan={1} className="p-1.5 border-2 border-black">
+                        {showVigias ? 'Totais (Aulas & Vigias)' : 'Totais (Aulas)'}
+                      </th>
+                      <th colSpan={1} rowSpan={2} className="p-1.5 border-2 border-black">Valor a Receber</th>
                     </tr>
                     <tr className="bg-gray-200 border-2 border-black">
                       <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
@@ -406,32 +472,38 @@ const RelatoriosPage = () => {
                         5ª Semana
                         <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[4]})</span>
                       </th>
+                      <th colSpan={2} className="p-1 border-2 border-black text-[9px] w-16">Total Aulas</th>
+                      {showVigias && <th colSpan={2} className="p-1 border-2 border-black text-[9px] w-16">Total Vigias</th>}
                     </tr>
                     <tr className="bg-gray-200 border-2 border-black text-[9px]">
-                      <th className="p-1 border-2 border-black w-8">AP</th>
-                      <th className="p-1 border-2 border-black w-8">AD</th>
-                      <th className="p-1 border-2 border-black w-8">AP</th>
-                      <th className="p-1 border-2 border-black w-8">AD</th>
-                      <th className="p-1 border-2 border-black w-8">AP</th>
-                      <th className="p-1 border-2 border-black w-8">AD</th>
-                      <th className="p-1 border-2 border-black w-8">AP</th>
-                      <th className="p-1 border-2 border-black w-8">AD</th>
-                      <th className="p-1 border-2 border-black w-8">AP</th>
-                      <th className="p-1 border-2 border-black w-8">AD</th>
-                      <th className="p-1 border-2 border-black">Programadas</th>
-                      <th className="p-1 border-2 border-black">Dadas</th>
-                      <th className="p-1 border-2 border-black">Programadas</th>
-                      <th className="p-1 border-2 border-black">Dadas</th>
+                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
+                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
+                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
+                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
+                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
+                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
+                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
+                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
+                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
+                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
+                      <th className="p-1 border-2 border-black">AP</th>
+                      <th className="p-1 border-2 border-black">AD</th>
+                      {showVigias && (
+                        <>
+                          <th className="p-1 border-2 border-black">VP</th>
+                          <th className="p-1 border-2 border-black">VD</th>
+                        </>
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {dados.map((row, idx) => {
-                      const s = row.semanas || Array(5).fill({ap: 0, ad: 0});
-                      const s1 = s[0] || {ap: 0, ad: 0};
-                      const s2 = s[1] || {ap: 0, ad: 0};
-                      const s3 = s[2] || {ap: 0, ad: 0};
-                      const s4 = s[3] || {ap: 0, ad: 0};
-                      const s5 = s[4] || {ap: 0, ad: 0};
+                      const s = row.semanas || Array(5).fill({ap: 0, ad: 0, vp: 0, vd: 0});
+                      const s1 = s[0] || {ap: 0, ad: 0, vp: 0, vd: 0};
+                      const s2 = s[1] || {ap: 0, ad: 0, vp: 0, vd: 0};
+                      const s3 = s[2] || {ap: 0, ad: 0, vp: 0, vd: 0};
+                      const s4 = s[3] || {ap: 0, ad: 0, vp: 0, vd: 0};
+                      const s5 = s[4] || {ap: 0, ad: 0, vp: 0, vd: 0};
 
                       return (
                         <tr key={idx} className="border-2 border-black hover:bg-gray-50">
@@ -445,25 +517,28 @@ const RelatoriosPage = () => {
                             )}
                           </td>
                           
-                          <td className="p-1.5 border-2 border-black">{s1.ap || 0}</td>
-                          <td className="p-1.5 border-2 border-black">{s1.ad || 0}</td>
-                          <td className="p-1.5 border-2 border-black">{s2.ap || 0}</td>
-                          <td className="p-1.5 border-2 border-black">{s2.ad || 0}</td>
-                          <td className="p-1.5 border-2 border-black">{s3.ap || 0}</td>
-                          <td className="p-1.5 border-2 border-black">{s3.ad || 0}</td>
-                          <td className="p-1.5 border-2 border-black">{s4.ap || 0}</td>
-                          <td className="p-1.5 border-2 border-black">{s4.ad || 0}</td>
-                          <td className="p-1.5 border-2 border-black">{s5.ap || 0}</td>
-                          <td className="p-1.5 border-2 border-black">{s5.ad || 0}</td>
+                          <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s1.ap, s1.vp)}</td>
+                          <td className="p-1.5 border-2 border-black">{renderDadasCell(s1.ad, s1.vd)}</td>
+                          <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s2.ap, s2.vp)}</td>
+                          <td className="p-1.5 border-2 border-black">{renderDadasCell(s2.ad, s2.vd)}</td>
+                          <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s3.ap, s3.vp)}</td>
+                          <td className="p-1.5 border-2 border-black">{renderDadasCell(s3.ad, s3.vd)}</td>
+                          <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s4.ap, s4.vp)}</td>
+                          <td className="p-1.5 border-2 border-black">{renderDadasCell(s4.ad, s4.vd)}</td>
+                          <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s5.ap, s5.vp)}</td>
+                          <td className="p-1.5 border-2 border-black">{renderDadasCell(s5.ad, s5.vd)}</td>
 
                           <td className="p-1.5 border-2 border-black font-semibold">{row.total_ap}</td>
                           <td className="p-1.5 border-2 border-black font-extrabold">{row.total_ad}</td>
+                          {showVigias && (
+                            <>
+                              <td className="p-1.5 border-2 border-black font-semibold">{row.total_vp || 0}</td>
+                              <td className="p-1.5 border-2 border-black font-extrabold">{row.total_vd || 0}</td>
+                            </>
+                          )}
                           
-                          <td className="p-1.5 border-2 border-black">
-                            {formatarValor(row.total_ap * 500)}
-                          </td>
                           <td className="p-1.5 border-2 border-black font-extrabold">
-                            {formatarValor(row.total_ad * 500)}
+                            {formatarValor(((row.total_ad || 0) + (row.total_vd || 0)) * 500)}
                           </td>
                         </tr>
                       );
@@ -472,25 +547,78 @@ const RelatoriosPage = () => {
                     <tr className="border-2 border-black bg-gray-200 font-bold">
                       <td colSpan={2} className="p-1.5 text-center">Total Geral</td>
                       
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ap) || 0), 0)}</td>
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ad) || 0), 0)}</td>
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ap) || 0), 0)}</td>
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ad) || 0), 0)}</td>
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ap) || 0), 0)}</td>
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ad) || 0), 0)}</td>
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ap) || 0), 0)}</td>
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ad) || 0), 0)}</td>
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ap) || 0), 0)}</td>
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ad) || 0), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">
+                        {renderProgramadasCell(
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ap) || 0), 0),
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.vp) || 0), 0)
+                        )}
+                      </td>
+                      <td className="p-1.5 border-2 border-black">
+                        {renderDadasCell(
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ad) || 0), 0),
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.vd) || 0), 0)
+                        )}
+                      </td>
+                      <td className="p-1.5 border-2 border-black">
+                        {renderProgramadasCell(
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ap) || 0), 0),
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.vp) || 0), 0)
+                        )}
+                      </td>
+                      <td className="p-1.5 border-2 border-black">
+                        {renderDadasCell(
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ad) || 0), 0),
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.vd) || 0), 0)
+                        )}
+                      </td>
+                      <td className="p-1.5 border-2 border-black">
+                        {renderProgramadasCell(
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ap) || 0), 0),
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.vp) || 0), 0)
+                        )}
+                      </td>
+                      <td className="p-1.5 border-2 border-black">
+                        {renderDadasCell(
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ad) || 0), 0),
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.vd) || 0), 0)
+                        )}
+                      </td>
+                      <td className="p-1.5 border-2 border-black">
+                        {renderProgramadasCell(
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ap) || 0), 0),
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.vp) || 0), 0)
+                        )}
+                      </td>
+                      <td className="p-1.5 border-2 border-black">
+                        {renderDadasCell(
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ad) || 0), 0),
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.vd) || 0), 0)
+                        )}
+                      </td>
+                      <td className="p-1.5 border-2 border-black">
+                        {renderProgramadasCell(
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ap) || 0), 0),
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.vp) || 0), 0)
+                        )}
+                      </td>
+                      <td className="p-1.5 border-2 border-black">
+                        {renderDadasCell(
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ad) || 0), 0),
+                          dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.vd) || 0), 0)
+                        )}
+                      </td>
 
                       <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ap || 0), 0)}</td>
                       <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ad || 0), 0)}</td>
+                      {showVigias && (
+                        <>
+                          <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_vp || 0), 0)}</td>
+                          <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_vd || 0), 0)}</td>
+                        </>
+                      )}
                       
-                      <td className="p-1.5 border-2 border-black">
-                        {formatarValor(dados.reduce((acc, r) => acc + (r.total_ap || 0), 0) * 500)}
-                      </td>
                       <td className="p-1.5 border-2 border-black bg-yellow-100 text-[11px] font-black text-black">
-                        {formatarValor(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500)}
+                        {formatarValor((dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) + dados.reduce((acc, r) => acc + (r.total_vd || 0), 0)) * 500)}
                       </td>
                     </tr>
                   </tbody>
@@ -499,14 +627,14 @@ const RelatoriosPage = () => {
 
               <div className="mt-4 flex flex-col sm:flex-row justify-between items-start gap-4 w-full">
                 <div className="text-[10px] text-black font-bold text-left pt-2">
-                  <p>AP - Aulas Programadas;</p>
-                  <p>AD - Aulas Dadas;</p>
+                  <p>NB: AP - Aulas Programadas; AD - Aulas Dadas;</p>
+                  {showVigias && <p>VP - Vigias Programadas; VD - Vigias Dadas;</p>}
                 </div>
                 {cursoId === 1 && (
                   <div className="border-2 border-black p-2 bg-gray-50 text-right min-w-[280px] self-end sm:self-start">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-black block">Total Geral do Mês:</span>
                     <span className="text-sm font-black text-black block mt-0.5">
-                      {formatarValor(dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) * 500)}
+                      {formatarValor(valorTotalMts)}
                     </span>
                   </div>
                 )}
@@ -563,6 +691,226 @@ const RelatoriosPage = () => {
 
           <div className="mt-12 text-center text-[10px] text-gray-400 no-print">
             Este documento foi gerado electronicamente pelo SGFS em {new Date().toLocaleDateString('pt-PT')}
+          </div>
+        </div>
+      )}
+
+      {/* Falha Modal */}
+      {falhaModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 no-print">
+          <div className="bg-card w-full max-w-lg rounded-2xl shadow-xl overflow-hidden animate-in zoom-in-95">
+            <div className="p-4 border-b bg-secondary/30">
+              <h3 className="font-bold text-lg">Gerar Justificação Individual</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Documento especial para envio às finanças justicando lançamento fora do prazo.
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-muted-foreground">Selecionar Docente</label>
+                <select 
+                  value={falhaDocenteIdx}
+                  onChange={(e) => setFalhaDocenteIdx(parseInt(e.target.value))}
+                  className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-amber-500/20"
+                >
+                  {dados.map((d, i) => (
+                    <option key={i} value={i}>{d.docente_nome} (Valor: {formatarValor(((d.total_ad || 0) + (d.total_vd || 0)) * 500)})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-muted-foreground">Justificação da Falha / Atraso</label>
+                <textarea 
+                  value={falhaJustificacao}
+                  onChange={(e) => setFalhaJustificacao(e.target.value)}
+                  className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-amber-500/20 min-h-[100px] text-sm"
+                  placeholder="Escreva a justificação aqui..."
+                />
+              </div>
+            </div>
+            <div className="p-4 border-t bg-secondary/10 flex justify-end gap-2">
+              <button 
+                onClick={() => setFalhaModalOpen(false)}
+                className="px-4 py-2 text-sm font-bold bg-secondary hover:bg-secondary/80 rounded-xl transition-colors border"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={() => {
+                  setFalhaModalOpen(false);
+                  setViewMode('falha');
+                  const originalTitle = document.title;
+                  document.title = `Justificacao_${dados[falhaDocenteIdx]?.docente_nome}_Mes_${meses[mes-1]}`;
+                  setTimeout(() => {
+                    window.print();
+                    setTimeout(() => {
+                      document.title = originalTitle;
+                      setViewMode('folha');
+                    }, 1000);
+                  }, 150);
+                }}
+                className="px-4 py-2 text-sm font-bold bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-colors shadow-sm flex items-center gap-2"
+              >
+                <Printer size={16} />
+                Confirmar e Imprimir
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Falha Print Template */}
+      {viewMode === 'falha' && dados[falhaDocenteIdx] && (
+        <div className="bg-white text-black p-4 sm:p-8 border-0 shadow-none min-h-[1000px] flex flex-col print:p-0 print:border-0 print:shadow-none w-full relative">
+          <div className="text-center mb-8">
+            <img src="/emblema.png" alt="República de Moçambique" className="h-24 mx-auto mb-2 object-contain" />
+            <h2 className="font-bold uppercase text-sm tracking-wider">República de Moçambique</h2>
+            <div className="my-6">
+              <h2 className="text-base font-bold uppercase tracking-wide">Instituto Superior Politécnico de Tete</h2>
+              <h3 className="font-bold uppercase text-sm">(ISPT)</h3>
+            </div>
+            <h3 className="text-sm font-bold uppercase mt-6 leading-snug">
+              {cursoId === 2 ? 'Direcção do Curso Contabilidade e Auditoria e Contabilidade e Administração Pública Pós-laboral' :
+               cursoId === 3 ? 'Direcção do Curso Engenharia de Minas e Engenharia de Processamento Mineral Pós-laboral' :
+               cursoId === 4 ? 'Direcção do Curso Engenharia Informática Pós-laboral' : 'Direcção de Curso'}
+            </h3>
+          </div>
+
+          <div className="mt-8 space-y-8 px-4 sm:px-8 max-w-4xl mx-auto text-justify text-sm w-full">
+            <div className="border border-black p-4 bg-gray-50 mb-8">
+              <h4 className="font-bold uppercase text-center mb-4 underline">Nota de Justificação de Lançamento de Horas</h4>
+              <p className="mb-2"><span className="font-bold">Docente:</span> {dados[falhaDocenteIdx].docente_nome}</p>
+              <p className="mb-2"><span className="font-bold">Referência:</span> Mês de {meses[mes-1]} de {ano}</p>
+              <p className="mb-2"><span className="font-bold">Justificação:</span> {falhaJustificacao}</p>
+            </div>
+
+            <p className="mb-4 font-bold">Resumo das Horas Lançadas e Valor a Pagar:</p>
+            
+            <div className="overflow-x-auto w-full scrollbar-thin print:border-none print:overflow-visible print:w-full border-2 border-black">
+              <table className="w-full border-collapse text-[10px] text-center min-w-[950px] print:min-w-0">
+                <thead>
+                  <tr className="bg-gray-200 border-2 border-black">
+                    <th rowSpan={3} className="p-1.5 border-2 border-black w-8">Nº</th>
+                    <th rowSpan={3} className="p-1.5 border-2 border-black w-56 text-left">Docentes</th>
+                    <th colSpan={10} className="p-1.5 border-2 border-black">Aulas Mensais</th>
+                    <th colSpan={showVigias ? 4 : 2} rowSpan={1} className="p-1.5 border-2 border-black">
+                      {showVigias ? 'Totais (Aulas & Vigias)' : 'Totais (Aulas)'}
+                    </th>
+                    <th colSpan={1} rowSpan={2} className="p-1.5 border-2 border-black">Valor a Receber</th>
+                  </tr>
+                  <tr className="bg-gray-200 border-2 border-black">
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                      1ª Semana
+                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[0]})</span>
+                    </th>
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                      2ª Semana
+                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[1]})</span>
+                    </th>
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                      3ª Semana
+                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[2]})</span>
+                    </th>
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                      4ª Semana
+                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[3]})</span>
+                    </th>
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
+                      5ª Semana
+                      <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[4]})</span>
+                    </th>
+                    <th colSpan={2} className="p-1 border-2 border-black text-[9px] w-16">Total Aulas</th>
+                    {showVigias && <th colSpan={2} className="p-1 border-2 border-black text-[9px] w-16">Total Vigias</th>}
+                  </tr>
+                  <tr className="bg-gray-200 border-2 border-black text-[9px]">
+                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
+                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
+                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
+                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
+                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
+                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
+                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
+                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
+                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
+                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
+                    <th className="p-1 border-2 border-black">AP</th>
+                    <th className="p-1 border-2 border-black">AD</th>
+                    {showVigias && (
+                      <>
+                        <th className="p-1 border-2 border-black">VP</th>
+                        <th className="p-1 border-2 border-black">VD</th>
+                      </>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const row = dados[falhaDocenteIdx];
+                    const s = row.semanas || Array(5).fill({ap: 0, ad: 0, vp: 0, vd: 0});
+                    const s1 = s[0] || {ap: 0, ad: 0, vp: 0, vd: 0};
+                    const s2 = s[1] || {ap: 0, ad: 0, vp: 0, vd: 0};
+                    const s3 = s[2] || {ap: 0, ad: 0, vp: 0, vd: 0};
+                    const s4 = s[3] || {ap: 0, ad: 0, vp: 0, vd: 0};
+                    const s5 = s[4] || {ap: 0, ad: 0, vp: 0, vd: 0};
+
+                    return (
+                      <tr className="border-2 border-black font-semibold">
+                        <td className="p-1.5 border-2 border-black">1</td>
+                        <td className="p-1.5 border-2 border-black text-left">
+                          {row.docente_nome}
+                        </td>
+                        
+                        <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s1.ap, s1.vp)}</td>
+                        <td className="p-1.5 border-2 border-black">{renderDadasCell(s1.ad, s1.vd)}</td>
+                        <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s2.ap, s2.vp)}</td>
+                        <td className="p-1.5 border-2 border-black">{renderDadasCell(s2.ad, s2.vd)}</td>
+                        <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s3.ap, s3.vp)}</td>
+                        <td className="p-1.5 border-2 border-black">{renderDadasCell(s3.ad, s3.vd)}</td>
+                        <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s4.ap, s4.vp)}</td>
+                        <td className="p-1.5 border-2 border-black">{renderDadasCell(s4.ad, s4.vd)}</td>
+                        <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s5.ap, s5.vp)}</td>
+                        <td className="p-1.5 border-2 border-black">{renderDadasCell(s5.ad, s5.vd)}</td>
+
+                        <td className="p-1.5 border-2 border-black font-semibold">{row.total_ap}</td>
+                        <td className="p-1.5 border-2 border-black font-extrabold">{row.total_ad}</td>
+                        {showVigias && (
+                          <>
+                            <td className="p-1.5 border-2 border-black font-semibold">{row.total_vp || 0}</td>
+                            <td className="p-1.5 border-2 border-black font-extrabold">{row.total_vd || 0}</td>
+                          </>
+                        )}
+                        
+                        <td className="p-1.5 border-2 border-black font-extrabold bg-yellow-100">
+                          {formatarValor(((row.total_ad || 0) + (row.total_vd || 0)) * 500)}
+                        </td>
+                      </tr>
+                    );
+                  })()}
+                </tbody>
+              </table>
+            </div>
+            
+            <p>
+              Por ser verdade e para os devidos efeitos, lavrou-se a presente justificação que vai ser assinada pelo Diretor do Curso respectivo para ser submetida aos Serviços de Administração e Finanças do ISPT.
+            </p>
+          </div>
+
+          <div className="mt-20 text-center space-y-10 px-4 sm:px-8 max-w-4xl mx-auto w-full print-no-break">
+            <p className="text-sm">Tete, {new Date().getDate()} de {meses[new Date().getMonth()]} de {new Date().getFullYear()}</p>
+            <p className="font-bold uppercase tracking-wider text-xs">O Director do Curso</p>
+
+            <div className="flex flex-col items-center gap-8 mt-12 w-full">
+               <div className="space-y-2 text-center">
+                 <div className="h-10 flex items-end justify-center">
+                   <div className="border-b border-black w-60"></div>
+                 </div>
+                 <p className="text-xs font-semibold">
+                   {cursoId === 2 ? 'MSc. Almeida Ismael de Albuquerque' : 
+                    cursoId === 3 ? 'MSc. Lucas Jordão Simoco' : 
+                    cursoId === 4 ? 'MSc. Luís Jorge Nhacanhaca' : ''}
+                 </p>
+               </div>
+            </div>
           </div>
         </div>
       )}

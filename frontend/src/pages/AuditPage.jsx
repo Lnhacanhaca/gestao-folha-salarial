@@ -181,37 +181,37 @@ const AuditPage = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-card p-6 rounded-3xl border shadow-sm space-y-2">
-          <p className="text-sm font-semibold text-muted-foreground">Total de Atividades</p>
-          <p className="text-3xl font-black text-slate-800">{stats.totalLogs}</p>
-          <div className="text-xs text-muted-foreground">Registos encontrados</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-card p-4 sm:p-5 rounded-2xl border shadow-sm space-y-1 sm:space-y-2 hover:shadow-md transition-shadow">
+          <p className="text-xs sm:text-sm font-semibold text-muted-foreground">Total Atividades</p>
+          <p className="text-xl sm:text-3xl font-black text-slate-800">{stats.totalLogs}</p>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">Registos encontrados</div>
         </div>
-        <div className="bg-card p-6 rounded-3xl border shadow-sm space-y-2">
-          <p className="text-sm font-semibold text-muted-foreground">Logins Hoje</p>
-          <p className="text-3xl font-black text-sky-600">{stats.loginsToday}</p>
-          <div className="text-xs text-muted-foreground">Tentativas de acesso com sucesso</div>
+        <div className="bg-card p-4 sm:p-5 rounded-2xl border shadow-sm space-y-1 sm:space-y-2 hover:shadow-md transition-shadow">
+          <p className="text-xs sm:text-sm font-semibold text-muted-foreground">Logins Hoje</p>
+          <p className="text-xl sm:text-3xl font-black text-sky-600">{stats.loginsToday}</p>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">Acessos com sucesso</div>
         </div>
-        <div className="bg-card p-6 rounded-3xl border shadow-sm space-y-2">
-          <p className="text-sm font-semibold text-muted-foreground">Edições Realizadas</p>
-          <p className="text-3xl font-black text-amber-600">{stats.updates}</p>
-          <div className="text-xs text-muted-foreground">Atualizações de docentes/horas</div>
+        <div className="bg-card p-4 sm:p-5 rounded-2xl border shadow-sm space-y-1 sm:space-y-2 hover:shadow-md transition-shadow">
+          <p className="text-xs sm:text-sm font-semibold text-muted-foreground">Edições</p>
+          <p className="text-xl sm:text-3xl font-black text-amber-600">{stats.updates}</p>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">Atualizações efetuadas</div>
         </div>
-        <div className="bg-card p-6 rounded-3xl border shadow-sm space-y-2">
-          <p className="text-sm font-semibold text-muted-foreground">Remoções</p>
-          <p className="text-3xl font-black text-rose-600">{stats.deletions}</p>
-          <div className="text-xs text-muted-foreground">Eliminações de dados de segurança</div>
+        <div className="bg-card p-4 sm:p-5 rounded-2xl border shadow-sm space-y-1 sm:space-y-2 hover:shadow-md transition-shadow">
+          <p className="text-xs sm:text-sm font-semibold text-muted-foreground">Remoções</p>
+          <p className="text-xl sm:text-3xl font-black text-rose-600">{stats.deletions}</p>
+          <div className="text-[10px] sm:text-xs text-muted-foreground">Registos eliminados</div>
         </div>
       </div>
 
       {/* Filters Area */}
-      <div className="bg-card p-4 rounded-3xl border shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-card p-4 rounded-2xl sm:rounded-3xl border shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {/* Search */}
         <div className="relative">
           <Search className="absolute left-3 top-3 text-muted-foreground" size={18} />
           <input 
             type="text" 
-            placeholder="Pesquisar por detalhe, utilizador ou ação..." 
+            placeholder="Pesquisar..." 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-secondary/50 border-none rounded-xl py-2.5 pl-10 pr-4 outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium"
@@ -226,7 +226,7 @@ const AuditPage = () => {
             onChange={(e) => setUserFilter(e.target.value)}
             className="w-full bg-secondary/50 border-none rounded-xl py-2.5 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium"
           >
-            <option value="">Filtrar por Utilizador (Todos)</option>
+            <option value="">Utilizador (Todos)</option>
             {uniqueUsers.map(u => (
               <option key={u} value={u}>{u}</option>
             ))}
@@ -241,7 +241,7 @@ const AuditPage = () => {
             onChange={(e) => setActionFilter(e.target.value)}
             className="w-full bg-secondary/50 border-none rounded-xl py-2.5 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-sm font-medium"
           >
-            <option value="">Filtrar por Tipo de Ação (Todos)</option>
+            <option value="">Tipo de Ação (Todos)</option>
             {uniqueActions.map(a => (
               <option key={a} value={a}>{a}</option>
             ))}

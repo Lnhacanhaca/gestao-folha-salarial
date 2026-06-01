@@ -44,6 +44,23 @@ const getWeeksDateRanges = (mes, ano) => {
   return ranges;
 };
 
+const isLaunchWindowOpen = (targetMes, targetAno) => {
+  const now = new Date();
+  const curDay = now.getDate();
+  const curMonth = now.getMonth() + 1;
+  const curYear = now.getFullYear();
+
+  // Determine superior month and year
+  let supMonth = targetMes + 1;
+  let supYear = targetAno;
+  if (supMonth === 13) {
+    supMonth = 1;
+    supYear = targetAno + 1;
+  }
+
+  return curYear === supYear && curMonth === supMonth && curDay >= 1 && curDay <= 15;
+};
+
 const LancarNotasPage = () => {
   const { user } = useAuth();
   const [mes, setMes] = useState(() => parseInt(localStorage.getItem('sgfs_mes')) || new Date().getMonth() + 1);
@@ -52,9 +69,11 @@ const LancarNotasPage = () => {
   const [dados, setDados] = useState([]);
   const [loading, setLoading] = useState(false);
   const [lastSaved, setLastSaved] = useState(null);
-  const [inputMode, setInputMode] = useState('matrix'); // 'matrix' or 'individual'
+  const [inputMode, setInputMode] = useState('individual'); // default to 'individual' mode
   const [selectedDocenteIndex, setSelectedDocenteIndex] = useState(0);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isExamMode, setIsExamMode] = useState(() => localStorage.getItem('sgfs_show_vigias') === 'true');
+  const [showMobileList, setShowMobileList] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -80,9 +99,8 @@ const LancarNotasPage = () => {
   const isRectificationPeriod = currentDay >= 5 && currentDay <= 20;
   const canEditPreviousMonth = isPreviousMonth && isRectificationPeriod;
 
-  const isReadOnly = ((ano < currentYear || (ano === currentYear && mes < currentMonth)) 
-    && !canEditPreviousMonth 
-    && user?.role !== 'ADMIN') || cursoId === 1;
+  const isLaunchOpen = isLaunchWindowOpen(mes, ano);
+  const isReadOnly = (user?.role !== 'ADMIN' && !isLaunchOpen) || cursoId === 1;
   
   // Use a ref to access latest state inside the interval without restarting it
   const stateRef = React.useRef({ mes, ano, cursoId, dados });
@@ -123,7 +141,7 @@ const LancarNotasPage = () => {
   const addDocente = () => {
     setDados([...dados, {
       docente_nome: '',
-      semanas: Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: 0, ad: 0 }))
+      semanas: Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: 0, ad: 0, vp: 0, vd: 0 }))
     }]);
   };
 
@@ -193,6 +211,11 @@ const LancarNotasPage = () => {
       toast.error('Erro: Aulas Dadas (AD) não podem ser maiores que Programadas (AP)');
       return;
     }
+    
+    if (field === 'vd' && val > newDados[docIndex].semanas[weekIndex].vp && newDados[docIndex].semanas[weekIndex].vp > 0 && val > newDados[docIndex].semanas[weekIndex].vp * 3) {
+      // Allow VD > VP because "um docente pode vigiar a mais da hora que é programada", 
+      // but if it's exceedingly large we might want to warn. We'll just allow it.
+    }
 
     newDados[docIndex].semanas[weekIndex][field] = val;
 
@@ -200,7 +223,9 @@ const LancarNotasPage = () => {
     const row = newDados[docIndex];
     row.total_ap = row.semanas.reduce((acc, s) => acc + (parseFloat(s.ap) || 0), 0);
     row.total_ad = row.semanas.reduce((acc, s) => acc + (parseFloat(s.ad) || 0), 0);
-    row.valor_receber = row.total_ad * 500;
+    row.total_vp = row.semanas.reduce((acc, s) => acc + (parseFloat(s.vp) || 0), 0);
+    row.total_vd = row.semanas.reduce((acc, s) => acc + (parseFloat(s.vd) || 0), 0);
+    row.valor_receber = (row.total_ad + row.total_vd) * 500;
 
     if (canEditPreviousMonth) {
       row.retificada = true;
@@ -329,9 +354,11 @@ const LancarNotasPage = () => {
 
           return {
             docente_nome: doc.nome,
-            semanas: Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: apValue, ad: 0 })),
+            semanas: Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: apValue, ad: 0, vp: 0, vd: 0 })),
             total_ap: apValue * 5,
             total_ad: 0,
+            total_vp: 0,
+            total_vd: 0,
             valor_receber: 0,
             retificada: 0,
             observacoes: null
@@ -342,18 +369,22 @@ const LancarNotasPage = () => {
         const extraSaved = (savedFolha || []).filter(saved => 
           !defaultMapped.some(def => def.docente_nome.trim().toLowerCase() === saved.docente_nome.trim().toLowerCase())
         ).map(saved => {
-          const weeks = saved.semanas || Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: 0, ad: 0 }));
+          const weeks = saved.semanas || Array(5).fill(0).map((_, i) => ({ semana: i + 1, ap: 0, ad: 0, vp: 0, vd: 0 }));
           return {
             docente_nome: saved.docente_nome,
             total_ap: saved.total_ap || weeks.reduce((acc, s) => acc + (s.ap || 0), 0),
             total_ad: saved.total_ad || weeks.reduce((acc, s) => acc + (s.ad || 0), 0),
-            valor_receber: saved.valor_receber || (weeks.reduce((acc, s) => acc + (s.ad || 0), 0) * 500),
+            total_vp: saved.total_vp || weeks.reduce((acc, s) => acc + (s.vp || 0), 0),
+            total_vd: saved.total_vd || weeks.reduce((acc, s) => acc + (s.vd || 0), 0),
+            valor_receber: saved.valor_receber || ((weeks.reduce((acc, s) => acc + (s.ad || 0), 0) + weeks.reduce((acc, s) => acc + (s.vd || 0), 0)) * 500),
             retificada: saved.retificada || 0,
             observacoes: saved.observacoes || null,
             semanas: weeks.map((s, sIdx) => ({
               semana: sIdx + 1,
               ap: s.ap || 0,
-              ad: s.ad || 0
+              ad: s.ad || 0,
+              vp: s.vp || 0,
+              vd: s.vd || 0
             }))
           };
         });
@@ -369,7 +400,9 @@ const LancarNotasPage = () => {
                   semana: sIdx + 1,
                   // Load the saved AP if it exists, otherwise use profile's AP
                   ap: savedSemana && savedSemana.ap !== undefined ? parseFloat(savedSemana.ap) : defSemana.ap,
-                  ad: savedSemana ? (parseFloat(savedSemana.ad) || 0) : 0
+                  ad: savedSemana ? (parseFloat(savedSemana.ad) || 0) : 0,
+                  vp: savedSemana ? (parseFloat(savedSemana.vp) || 0) : 0,
+                  vd: savedSemana ? (parseFloat(savedSemana.vd) || 0) : 0
                 };
               });
 
@@ -378,7 +411,9 @@ const LancarNotasPage = () => {
                 docente_nome: saved.docente_nome,
                 total_ap: mergedSemanas.reduce((acc, s) => acc + s.ap, 0),
                 total_ad: mergedSemanas.reduce((acc, s) => acc + s.ad, 0),
-                valor_receber: mergedSemanas.reduce((acc, s) => acc + s.ad, 0) * 500,
+                total_vp: mergedSemanas.reduce((acc, s) => acc + s.vp, 0),
+                total_vd: mergedSemanas.reduce((acc, s) => acc + s.vd, 0),
+                valor_receber: (mergedSemanas.reduce((acc, s) => acc + s.ad, 0) + mergedSemanas.reduce((acc, s) => acc + s.vd, 0)) * 500,
                 retificada: saved.retificada,
                 observacoes: saved.observacoes,
                 semanas: mergedSemanas
@@ -441,6 +476,23 @@ const LancarNotasPage = () => {
               Docente por Docente
             </button>
           </div>
+          
+          {inputMode === 'individual' && (
+            <div className="flex items-center gap-2 mt-3 p-2 bg-amber-50 border border-amber-200 rounded-xl w-fit">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input 
+                  type="checkbox" 
+                  checked={isExamMode}
+                  onChange={(e) => {
+                    setIsExamMode(e.target.checked);
+                    localStorage.setItem('sgfs_show_vigias', e.target.checked ? 'true' : 'false');
+                  }}
+                  className="rounded text-amber-600 focus:ring-amber-500 h-4 w-4 cursor-pointer"
+                />
+                <span className="text-xs font-bold text-amber-800">Modo Exames (Vigias)</span>
+              </label>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
@@ -534,6 +586,30 @@ const LancarNotasPage = () => {
         </div>
       </div>
       
+      {user?.role !== 'ADMIN' && cursoId !== 1 && (
+        isLaunchOpen ? (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-sm font-medium flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-300">
+            <span className="text-base">✅</span>
+            <div>
+              <p className="font-bold">Período de Lançamento Aberto</p>
+              <p className="text-xs text-emerald-700 mt-0.5 leading-normal">
+                Você pode lançar e editar as horas de <strong>{meses[mes - 1]} de {ano}</strong> até o dia 15 deste mês superior. Após este período, a folha será bloqueada para edições de diretores de curso.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-rose-50 border border-rose-200 text-rose-800 p-4 rounded-xl text-sm font-medium flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-300">
+            <span className="text-base">⚠️</span>
+            <div>
+              <p className="font-bold">Período de Lançamento Fechado (Apenas Leitura)</p>
+              <p className="text-xs text-rose-700 mt-0.5 leading-normal">
+                O preenchimento ou modificação de horas para <strong>{meses[mes - 1]} de {ano}</strong> só é permitido a diretores de curso entre o dia 1 e dia 15 do mês superior (mês seguinte). Somente o administrador geral pode autorizar alterações adicionais.
+              </p>
+            </div>
+          </div>
+        )
+      )}
+
       {cursoId === 1 && (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl text-sm font-medium flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-300">
           <span className="text-base">⚠️</span>
@@ -562,30 +638,36 @@ const LancarNotasPage = () => {
 
       {/* Input Mode Conditional Rendering */}
       {inputMode === 'individual' ? (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 animate-in fade-in duration-300">
+        <div className="flex flex-col-reverse lg:grid lg:grid-cols-4 gap-6 animate-in fade-in duration-300">
           {/* Left Column: Sidebar of Docentes */}
-          <div className={`lg:col-span-1 bg-card rounded-2xl border shadow-sm flex-col h-[550px] overflow-hidden ${isSidebarOpen ? 'flex absolute inset-0 z-50 m-4 shadow-2xl' : 'hidden lg:flex'}`}>
-            <div className="p-4 border-b bg-secondary/10 flex items-center justify-between">
-              <h3 className="font-bold text-sm">Docentes ({dados.length})</h3>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={addDocente}
-                  disabled={isReadOnly}
-                  className="text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors disabled:opacity-50"
-                  title="Adicionar Docente"
-                >
-                  <Plus size={16} />
-                </button>
-                <button
-                  onClick={() => setIsSidebarOpen(false)}
-                  className="lg:hidden text-muted-foreground hover:bg-secondary p-1.5 rounded-lg transition-colors"
-                >
-                  <X size={16} />
-                </button>
+          <div className="lg:col-span-1 flex flex-col gap-4">
+            <button 
+              type="button"
+              onClick={() => setShowMobileList(!showMobileList)}
+              className="lg:hidden w-full flex items-center justify-between bg-card hover:bg-muted/50 border p-3.5 rounded-2xl shadow-sm text-xs font-bold text-slate-700 select-none cursor-pointer transition-colors"
+            >
+              <span className="flex items-center gap-2">📋 Lista de Docentes ({dados.length})</span>
+              <span className="text-primary font-black">{showMobileList ? 'Ocultar ↑' : 'Exibir ↓'}</span>
+            </button>
+
+            <div className={`bg-card rounded-2xl border shadow-sm flex flex-col lg:h-[550px] overflow-hidden transition-all duration-300 ${
+              showMobileList ? 'flex min-h-[300px] max-h-[450px]' : 'hidden lg:flex'
+            }`}>
+              <div className="p-4 border-b bg-secondary/10 flex items-center justify-between">
+                <h3 className="font-bold text-sm">Docentes ({dados.length})</h3>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={addDocente}
+                    disabled={isReadOnly}
+                    className="text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors disabled:opacity-50"
+                    title="Adicionar Docente"
+                  >
+                    <Plus size={16} />
+                  </button>
+                </div>
               </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto divide-y">
+              
+              <div className="flex-1 overflow-y-auto divide-y">
               {dados.map((doc, idx) => (
                 <button
                   key={idx}
@@ -613,6 +695,7 @@ const LancarNotasPage = () => {
               )}
             </div>
           </div>
+        </div>
 
           {/* Right Column: Focused Edit Form */}
           <div className="lg:col-span-3 bg-card rounded-2xl border shadow-sm p-6 flex flex-col justify-between min-h-[550px]">
@@ -620,12 +703,6 @@ const LancarNotasPage = () => {
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b">
                   <div className="flex-1 w-full max-w-md flex items-center gap-2">
-                    <button 
-                      onClick={() => setIsSidebarOpen(true)}
-                      className="lg:hidden p-2 text-primary bg-primary/10 hover:bg-primary/20 rounded-lg transition-colors flex-shrink-0"
-                    >
-                      <Menu size={18} />
-                    </button>
                     <div className="w-full">
                       <label className="text-xs font-semibold text-muted-foreground block mb-1">Nome do Docente</label>
                       <input
@@ -706,6 +783,34 @@ const LancarNotasPage = () => {
                             min="0"
                           />
                         </div>
+                        {isExamMode && (
+                          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-muted/50">
+                            <div>
+                              <label className="text-[9px] font-bold text-muted-foreground block mb-0.5" title="Vigias Programadas">VP</label>
+                              <input
+                                type="number"
+                                value={s.vp}
+                                onChange={(e) => updateCell(activeDocenteIndex, sIdx, 'vp', e.target.value)}
+                                disabled={isReadOnly}
+                                className="w-full bg-background border rounded-lg p-1.5 text-center text-xs font-bold outline-none focus:ring-2 focus:ring-amber-500/50"
+                                placeholder="0"
+                                min="0"
+                              />
+                            </div>
+                            <div className="bg-amber-50/50 rounded-lg">
+                              <label className="text-[9px] font-black text-amber-700 block mb-0.5 px-1" title="Vigias Dadas">VD</label>
+                              <input
+                                type="number"
+                                value={s.vd}
+                                onChange={(e) => updateCell(activeDocenteIndex, sIdx, 'vd', e.target.value)}
+                                disabled={isReadOnly}
+                                className="w-full bg-white border border-amber-200 rounded-lg p-1.5 text-center text-xs font-black text-amber-700 outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                                placeholder="0"
+                                min="0"
+                              />
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -722,11 +827,32 @@ const LancarNotasPage = () => {
                     <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total AD</span>
                     <span className="text-lg font-black text-primary">{calculateTotal(selectedDocente.semanas, 'ad')}h</span>
                   </div>
+                  {isExamMode && (
+                    <>
+                      <div className="w-px h-8 bg-muted" />
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total VP</span>
+                        <span className="text-lg font-black text-slate-800">{calculateTotal(selectedDocente.semanas, 'vp')}h</span>
+                      </div>
+                      <div className="w-px h-8 bg-muted" />
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-amber-700 block">Total VD</span>
+                        <span className="text-lg font-black text-amber-600">{calculateTotal(selectedDocente.semanas, 'vd')}h</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="w-px h-8 bg-muted" />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-rose-500 block">Previsão Faltas</span>
+                    <span className="text-lg font-black text-rose-600">
+                      {Math.max(0, calculateTotal(selectedDocente.semanas, 'ap') - calculateTotal(selectedDocente.semanas, 'ad'))}h
+                    </span>
+                  </div>
                   <div className="w-px h-8 bg-muted" />
                   <div>
                     <span className="text-[10px] uppercase font-bold text-muted-foreground block">Valor a Receber</span>
                     <span className="text-lg font-black text-emerald-600">
-                      {(calculateTotal(selectedDocente.semanas, 'ad') * 500).toLocaleString('pt-MZ')} Mt
+                      {((calculateTotal(selectedDocente.semanas, 'ad') + calculateTotal(selectedDocente.semanas, 'vd')) * 500).toLocaleString('pt-MZ')} Mt
                     </span>
                   </div>
                 </div>

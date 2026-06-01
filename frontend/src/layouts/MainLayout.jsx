@@ -154,20 +154,20 @@ const MainLayout = () => {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
            {/* Breadcrumb Header */}
-           <div className="bg-white px-8 py-5 flex items-center justify-between border-b border-slate-100 no-print">
-              <div>
-                 <h2 className="text-xl font-bold text-slate-800">{getBreadcrumbTitle()}</h2>
-                 <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 font-medium">
-                    <Link to="/" className="hover:text-primary transition-colors">Início</Link>
-                    <ChevronRight size={12} className="text-slate-300" />
-                    <span className="text-slate-400 font-bold">{getBreadcrumbTitle()}</span>
-                 </p>
-              </div>
-           </div>
+            <div className="bg-white px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between border-b border-slate-100 no-print">
+               <div>
+                  <h2 className="text-xl font-bold text-slate-800">{getBreadcrumbTitle()}</h2>
+                  <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 font-medium">
+                     <Link to="/" className="hover:text-primary transition-colors">Início</Link>
+                     <ChevronRight size={12} className="text-slate-300" />
+                     <span className="text-slate-400 font-bold">{getBreadcrumbTitle()}</span>
+                  </p>
+               </div>
+            </div>
 
-           <main className="p-8 max-w-[1600px] w-full mx-auto flex-1">
-              <Outlet />
-           </main>
+            <main className="p-4 sm:p-8 max-w-[1600px] w-full mx-auto flex-1">
+               <Outlet />
+            </main>
         </div>
       </div>
 
@@ -176,9 +176,14 @@ const MainLayout = () => {
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
           <div className="w-64 h-full bg-white flex flex-col justify-between" onClick={e => e.stopPropagation()}>
              <div>
-               <div className="h-16 bg-primary flex items-center px-6 gap-2 border-b border-white/10">
-                  <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center font-bold text-white text-sm">SG</div>
-                  <span className="text-white font-bold text-sm uppercase tracking-wide">SGFS Nocturno</span>
+               <div className="h-16 bg-primary flex items-center justify-between px-6 border-b border-white/10">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center font-bold text-white text-sm">SG</div>
+                    <span className="text-white font-bold text-sm uppercase tracking-wide">SGFS Nocturno</span>
+                  </div>
+                  <button onClick={() => setIsMobileMenuOpen(false)} className="text-white hover:text-white/80 transition-colors p-1" aria-label="Close menu">
+                    <X size={22} />
+                  </button>
                </div>
                <nav className="flex-1 flex flex-col pt-4">
                   {menuItems.map((item) => (
