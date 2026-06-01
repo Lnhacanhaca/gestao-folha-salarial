@@ -74,4 +74,71 @@ const restore = async (req, res, next) => {
   }
 };
 
-module.exports = { backup, restore };
+const listarExcecoes = async (req, res, next) => {
+  try {
+    const list = await db('excecoes_prazos')
+      .select('*')
+      .orderBy('created_at', 'desc');
+    res.json(list);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const criarExcecao = async (req, res, next) => {
+  const { curso_id, mes, ano, data_limite, motivo } = req.body;
+  try {
+    if (!curso_id || !mes || !ano || !data_limite) {
+      return res.status(400).json({ error: 'Os campos curso_id, mes, ano e data_limite são obrigatórios.' });
+    }
+
+    const [id] = await db('excecoes_prazos').insert({
+      curso_id: parseInt(curso_id),
+      mes: parseInt(mes),
+      ano: parseInt(ano),
+      data_limite,
+      motivo: motivo || null
+    });
+
+    await logAction({
+      userId: req.user.id,
+      username: req.user.username,
+      action: 'CREATE_EXCECAO_PRAZO',
+      targetType: 'excecoes_prazos',
+      targetId: id.toString(),
+      details: `Criou exceção de prazo para o curso ID ${curso_id} (mês ${mes}/${ano}) com limite até ${new Date(data_limite).toLocaleString('pt-PT')}.`
+    });
+
+    const criada = await db('excecoes_prazos').where({ id }).first();
+    res.status(201).json(criada);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const deletarExcecao = async (req, res, next) => {
+  const { id } = req.params;
+  try {
+    const exception = await db('excecoes_prazos').where({ id: parseInt(id) }).first();
+    if (!exception) {
+      return res.status(404).json({ error: 'Exceção não encontrada.' });
+    }
+
+    await db('excecoes_prazos').where({ id: parseInt(id) }).del();
+
+    await logAction({
+      userId: req.user.id,
+      username: req.user.username,
+      action: 'DELETE_EXCECAO_PRAZO',
+      targetType: 'excecoes_prazos',
+      targetId: id,
+      details: `Removeu a exceção de prazo para o curso ID ${exception.curso_id} (mês ${exception.mes}/${exception.ano}).`
+    });
+
+    res.json({ success: true, message: 'Exceção de prazo removida com sucesso!' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { backup, restore, listarExcecoes, criarExcecao, deletarExcecao };

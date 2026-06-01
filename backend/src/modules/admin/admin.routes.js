@@ -9,4 +9,9 @@ router.use(authorizeRoles('ADMIN'));
 router.get('/backup', adminController.backup);
 router.post('/restore', adminController.restore);
 
+// Exceções de Prazo de Edição
+router.get('/excecoes', adminController.listarExcecoes);
+router.post('/excecoes', adminController.criarExcecao);
+router.delete('/excecoes/:id', adminController.deletarExcecao);
+
 module.exports = router;

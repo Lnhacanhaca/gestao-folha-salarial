@@ -18,6 +18,23 @@ const isLaunchWindowOpen = (targetMes, targetAno) => {
   return curYear === supYear && curMonth === supMonth && curDay >= 1 && curDay <= 15;
 };
 
+const checkHasActiveException = async (curso_id, mes, ano) => {
+  try {
+    const exception = await db('excecoes_prazos')
+      .where({
+        curso_id: parseInt(curso_id),
+        mes: parseInt(mes),
+        ano: parseInt(ano)
+      })
+      .andWhere('data_limite', '>=', new Date().toISOString())
+      .first();
+    return !!exception;
+  } catch (err) {
+    console.error('Erro ao verificar exceção de prazo:', err);
+    return false;
+  }
+};
+
 const importar = async (req, res, next) => {
   const { mes, ano, curso_id, dados } = req.body;
   
@@ -25,8 +42,11 @@ const importar = async (req, res, next) => {
     return res.status(400).json({ error: 'Não é permitido fazer lançamentos directos na vista Geral Consolidada.' });
   }
 
-  if (req.user.role !== 'ADMIN' && !isLaunchWindowOpen(mes, ano)) {
-    return res.status(403).json({ error: 'Erro de permissão: O período de lançamento para este mês de referência está fechado para diretores de curso (permitido apenas de 1 a 15 do mês seguinte).' });
+  if (req.user.role !== 'ADMIN') {
+    const hasException = await checkHasActiveException(curso_id, mes, ano);
+    if (!hasException && !isLaunchWindowOpen(mes, ano)) {
+      return res.status(403).json({ error: 'Erro de permissão: O período de lançamento para este mês de referência está fechado para diretores de curso (permitido apenas de 1 a 15 do mês seguinte).' });
+    }
   }
 
 
@@ -449,8 +469,11 @@ const deletarDocenteFolha = async (req, res, next) => {
   const { curso_id, docente_nome } = req.body;
   const { mes, ano } = req.query;
 
-  if (req.user.role !== 'ADMIN' && !isLaunchWindowOpen(mes, ano)) {
-    return res.status(403).json({ error: 'Erro de permissão: O período de modificação/exclusão para este mês de referência está fechado para diretores de curso (permitido apenas de 1 a 15 do mês seguinte).' });
+  if (req.user.role !== 'ADMIN') {
+    const hasException = await checkHasActiveException(curso_id, mes, ano);
+    if (!hasException && !isLaunchWindowOpen(mes, ano)) {
+      return res.status(403).json({ error: 'Erro de permissão: O período de modificação/exclusão para este mês de referência está fechado para diretores de curso (permitido apenas de 1 a 15 do mês seguinte).' });
+    }
   }
 
   const trx = await db.transaction();
@@ -534,4 +557,22 @@ const getAnalytics = async (req, res, next) => {
   }
 };
 
-module.exports = { importar, getByCurso, getGeral, deletarDocenteFolha, getAnalytics };
+const getExcecaoAtiva = async (req, res, next) => {
+  const { curso_id, mes, ano } = req.query;
+  try {
+    const exception = await db('excecoes_prazos')
+      .where({
+        curso_id: parseInt(curso_id),
+        mes: parseInt(mes),
+        ano: parseInt(ano)
+      })
+      .andWhere('data_limite', '>=', new Date().toISOString())
+      .first();
+
+    res.json({ ativa: !!exception, excecao: exception || null });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { importar, getByCurso, getGeral, deletarDocenteFolha, getAnalytics, getExcecaoAtiva };

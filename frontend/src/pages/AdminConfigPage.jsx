@@ -11,7 +11,12 @@ import {
   HelpCircle,
   Palette,
   Sun,
-  Moon
+  Moon,
+  Calendar,
+  ShieldAlert,
+  Trash2,
+  Clock,
+  Plus
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import api from '../services/api';
@@ -46,6 +51,73 @@ const AdminConfigPage = () => {
   // Theme state
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem('themeMode') || 'light');
   const [themeColor, setThemeColor] = useState(() => localStorage.getItem('themeColor') || 'blue');
+
+  // Exceções de Prazo state
+  const [excecoes, setExcecoes] = useState([]);
+  const [loadingExcecoes, setLoadingExcecoes] = useState(false);
+  const [newExcecao, setNewExcecao] = useState({
+    curso_id: 2,
+    mes: new Date().getMonth() + 1,
+    ano: new Date().getFullYear(),
+    data_limite: '',
+    motivo: ''
+  });
+
+  const fetchExcecoes = async () => {
+    setLoadingExcecoes(true);
+    try {
+      const { data } = await api.get('/admin/excecoes');
+      setExcecoes(data);
+    } catch (err) {
+      console.error('Erro ao buscar exceções:', err);
+    } finally {
+      setLoadingExcecoes(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExcecoes();
+  }, []);
+
+  const handleAddExcecao = async (e) => {
+    e.preventDefault();
+    if (!newExcecao.data_limite) {
+      toast.error('Por favor, defina a data limite para a exceção.');
+      return;
+    }
+    const toastId = toast.loading('A criar exceção de prazo...');
+    try {
+      await api.post('/admin/excecoes', {
+        curso_id: parseInt(newExcecao.curso_id),
+        mes: parseInt(newExcecao.mes),
+        ano: parseInt(newExcecao.ano),
+        data_limite: new Date(newExcecao.data_limite).toISOString(),
+        motivo: newExcecao.motivo
+      });
+      toast.success('Exceção de prazo aberta com sucesso!', { id: toastId });
+      setNewExcecao({
+        curso_id: 2,
+        mes: new Date().getMonth() + 1,
+        ano: new Date().getFullYear(),
+        data_limite: '',
+        motivo: ''
+      });
+      fetchExcecoes();
+    } catch (error) {
+      toast.error('Erro ao abrir exceção: ' + (error.response?.data?.error || error.message), { id: toastId });
+    }
+  };
+
+  const handleDeleteExcecao = async (id) => {
+    const toastId = toast.loading('A remover exceção...');
+    try {
+      await api.delete(`/admin/excecoes/${id}`);
+      toast.success('Exceção de prazo removida com sucesso!', { id: toastId });
+      fetchExcecoes();
+    } catch (error) {
+      toast.error('Erro ao remover exceção: ' + (error.response?.data?.error || error.message), { id: toastId });
+    }
+  };
 
   const handleBackup = async () => {
     setBackingUp(true);
@@ -335,6 +407,175 @@ const AdminConfigPage = () => {
                 <span className="text-xs font-semibold">Modo Escuro</span>
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Exceções de Prazo de Edição */}
+      <div className="bg-card border shadow-sm rounded-3xl p-6 space-y-6 relative overflow-hidden transition-all duration-300 hover:shadow-md">
+        <div className="flex items-center gap-2.5 pb-4 border-b">
+          <ShieldAlert className="text-primary" size={24} />
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">Exceções de Prazo de Edição (Diretores)</h2>
+            <p className="text-xs text-muted-foreground">Abra exceções para permitir que diretores lancem ou editem horas após o dia 15</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Formulário de Criação */}
+          <form onSubmit={handleAddExcecao} className="space-y-4 lg:col-span-1 border-r lg:pr-8 border-slate-100">
+            <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+              <Plus size={16} className="text-primary" />
+              Nova Exceção
+            </h3>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-500">Curso Selecionado</label>
+              <select
+                value={newExcecao.curso_id}
+                onChange={(e) => setNewExcecao({ ...newExcecao, curso_id: e.target.value })}
+                className="w-full bg-secondary/50 border-none rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-medium"
+              >
+                <option value={2}>Contabilidade e Auditoria</option>
+                <option value={3}>Contabilidade e Administração Pública</option>
+                <option value={4}>Engenharia de Minas</option>
+                <option value={5}>Engenharia de Processamento Mineral</option>
+                <option value={6}>Engenharia Informática</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-500">Mês</label>
+                <select
+                  value={newExcecao.mes}
+                  onChange={(e) => setNewExcecao({ ...newExcecao, mes: e.target.value })}
+                  className="w-full bg-secondary/50 border-none rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-medium"
+                >
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <option key={i + 1} value={i + 1}>
+                      {new Date(0, i).toLocaleString('pt-PT', { month: 'long' })}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-500">Ano</label>
+                <input
+                  type="number"
+                  value={newExcecao.ano}
+                  onChange={(e) => setNewExcecao({ ...newExcecao, ano: e.target.value })}
+                  className="w-full bg-secondary/50 border-none rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-medium"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-500">Prazo Limite da Exceção</label>
+              <input
+                type="datetime-local"
+                value={newExcecao.data_limite}
+                onChange={(e) => setNewExcecao({ ...newExcecao, data_limite: e.target.value })}
+                className="w-full bg-secondary/50 border-none rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-medium"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-500">Motivo / Justificativa</label>
+              <textarea
+                placeholder="Ex: Diretor doente, prorrogação de prazo acadêmico"
+                value={newExcecao.motivo}
+                onChange={(e) => setNewExcecao({ ...newExcecao, motivo: e.target.value })}
+                rows={2}
+                className="w-full bg-secondary/50 border-none rounded-xl py-2 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-medium resize-none"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-primary hover:bg-primary/90 text-white py-2.5 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 shadow-primary/10 cursor-pointer"
+            >
+              <Plus size={14} />
+              Criar Exceção
+            </button>
+          </form>
+
+          {/* Listagem de Exceções */}
+          <div className="lg:col-span-2 space-y-4">
+            <h3 className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+              <Clock size={16} className="text-primary animate-[pulse_2s_infinite]" />
+              Exceções Ativas e Histórico
+            </h3>
+
+            {loadingExcecoes ? (
+              <div className="flex items-center justify-center p-8">
+                <RefreshCw className="animate-spin text-primary" size={24} />
+              </div>
+            ) : excecoes.length === 0 ? (
+              <div className="p-8 border border-dashed rounded-2xl text-center text-slate-400 space-y-2">
+                <ShieldAlert size={28} className="mx-auto text-slate-300" />
+                <p className="text-xs font-bold">Nenhuma exceção de prazo aberta atualmente.</p>
+                <p className="text-[10px] text-slate-500">Os Diretores de Curso estão sujeitos ao limite regular de 1 a 15 de cada mês.</p>
+              </div>
+            ) : (
+              <div className="space-y-3 overflow-y-auto max-h-[380px] pr-2">
+                {excecoes.map((exc) => {
+                  const cursoNome = {
+                    2: "Contabilidade e Auditoria",
+                    3: "Contabilidade e Administração Pública",
+                    4: "Engenharia de Minas",
+                    5: "Engenharia de Processamento Mineral",
+                    6: "Engenharia Informática"
+                  }[exc.curso_id] || `Curso ${exc.curso_id}`;
+
+                  const isAtiva = new Date(exc.data_limite) >= new Date();
+
+                  return (
+                    <div 
+                      key={exc.id} 
+                      className={`p-4 border rounded-2xl flex items-center justify-between gap-4 transition-all hover:bg-slate-50/50 ${
+                        isAtiva ? 'border-primary/20 bg-primary/[0.01]' : 'border-slate-100 bg-slate-50/30 opacity-70'
+                      }`}
+                    >
+                      <div className="space-y-1.5 flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider ${
+                            isAtiva ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-200 text-slate-700'
+                          }`}>
+                            {isAtiva ? 'Ativa' : 'Expirada'}
+                          </span>
+                          <span className="text-xs font-black text-slate-800 truncate">{cursoNome}</span>
+                        </div>
+
+                        <p className="text-xs font-bold text-slate-600">
+                          Mês de Referência: <span className="text-primary font-black">{new Date(0, exc.mes - 1).toLocaleString('pt-PT', { month: 'long' })} / {exc.ano}</span>
+                        </p>
+
+                        <div className="flex items-center gap-1.5 text-[10px] font-semibold text-slate-500">
+                          <Calendar size={12} className="shrink-0" />
+                          <span>Limite: {new Date(exc.data_limite).toLocaleString('pt-PT')}</span>
+                        </div>
+
+                        {exc.motivo && (
+                          <p className="text-[10px] text-slate-500 font-medium italic border-l-2 border-slate-200 pl-2 mt-1">
+                            Motivo: {exc.motivo}
+                          </p>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteExcecao(exc.id)}
+                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-all cursor-pointer hover:scale-105 active:scale-95 border border-transparent hover:border-rose-100 shrink-0"
+                        title="Remover Exceção"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       </div>

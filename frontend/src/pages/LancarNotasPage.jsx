@@ -74,6 +74,25 @@ const LancarNotasPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isExamMode, setIsExamMode] = useState(() => localStorage.getItem('sgfs_show_vigias') === 'true');
   const [showMobileList, setShowMobileList] = useState(false);
+  const [hasException, setHasException] = useState(false);
+  const [excecaoDetalhe, setExcecaoDetalhe] = useState(null);
+
+  const checkExcecaoAtiva = async (fMes, fAno, fCursoId) => {
+    if (fCursoId === 1) {
+      setHasException(false);
+      setExcecaoDetalhe(null);
+      return;
+    }
+    try {
+      const { data } = await api.get(`/folhas/excecao-ativa?curso_id=${fCursoId}&mes=${fMes}&ano=${fAno}`);
+      setHasException(data.ativa);
+      setExcecaoDetalhe(data.excecao);
+    } catch (err) {
+      console.error('Erro ao buscar exceção ativa:', err);
+      setHasException(false);
+      setExcecaoDetalhe(null);
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -100,7 +119,7 @@ const LancarNotasPage = () => {
   const canEditPreviousMonth = isPreviousMonth && isRectificationPeriod;
 
   const isLaunchOpen = isLaunchWindowOpen(mes, ano);
-  const isReadOnly = (user?.role !== 'ADMIN' && !isLaunchOpen) || cursoId === 1;
+  const isReadOnly = (user?.role !== 'ADMIN' && !isLaunchOpen && !hasException) || cursoId === 1;
   
   // Use a ref to access latest state inside the interval without restarting it
   const stateRef = React.useRef({ mes, ano, cursoId, dados });
@@ -280,6 +299,7 @@ const LancarNotasPage = () => {
   const fetchFolha = async (fMes, fAno, fCursoId) => {
     try {
       setLoading(true);
+      await checkExcecaoAtiva(fMes, fAno, fCursoId);
       
       // 1. Fetch teachers from Docentes database
       const { data: docentes } = await api.get('/docentes');
@@ -587,7 +607,25 @@ const LancarNotasPage = () => {
       </div>
       
       {user?.role !== 'ADMIN' && cursoId !== 1 && (
-        isLaunchOpen ? (
+        hasException ? (
+          <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-sm font-medium flex items-start gap-2.5 shadow-sm animate-in slide-in-from-top-2 duration-300">
+            <span className="text-base text-emerald-600 shrink-0">✅</span>
+            <div className="space-y-1">
+              <p className="font-bold flex items-center gap-1.5">
+                <span>Lançamento Autorizado por Exceção Administrativa</span>
+                <span className="bg-emerald-200 text-emerald-900 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider">Ativo</span>
+              </p>
+              <p className="text-xs text-emerald-700 leading-normal">
+                O Administrador Geral abriu uma exceção de prazo para a sua folha de <strong>{meses[mes - 1]} de {ano}</strong>. Você pode lançar e editar as horas deste curso normalmente até o prazo de <strong>{excecaoDetalhe ? new Date(excecaoDetalhe.data_limite).toLocaleString('pt-PT') : ''}</strong>.
+              </p>
+              {excecaoDetalhe?.motivo && (
+                <p className="text-[10px] text-emerald-600 font-bold italic mt-1.5 pl-2 border-l-2 border-emerald-300">
+                  Justificativa: {excecaoDetalhe.motivo}
+                </p>
+              )}
+            </div>
+          </div>
+        ) : isLaunchOpen ? (
           <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-4 rounded-xl text-sm font-medium flex items-start gap-2 shadow-sm animate-in slide-in-from-top-2 duration-300">
             <span className="text-base">✅</span>
             <div>
