@@ -68,6 +68,22 @@ O menu de **Declaração Individual (Falha no Lançamento)** em `RelatoriosPage.
 
 ---
 
+## 🔑 5. Exceções de Prazo de Edição para Diretores (UI Administrativa)
+
+Implementada a funcionalidade para permitir flexibilidade operacional no SGFS quando houver necessidade justificada de lançamento fora do período regulamentar (dias 1-15):
+
+* **Painel Administrativo (`AdminConfigPage.jsx`):** Adicionado um novo módulo completo de gestão de exceções de prazos. O Administrador pode:
+  - Selecionar um curso específico.
+  - Selecionar o mês e ano de referência a ser liberado.
+  - Definir uma data e hora limite no futuro para encerramento da exceção.
+  - Inserir uma justificativa ou motivo.
+* **Sincronização de Permissão:** O backend consulta dinamicamente a tabela de exceções (`excecoes_prazos`). Se houver uma exceção ativa para o curso e o período selecionado, as ações de escrita (`importar` e `deletarDocenteFolha`) são autorizadas no backend para Diretores de Curso.
+* **UI Inteligente (`LancarNotasPage.jsx`):** Caso o período normal de lançamento esteja encerrado mas haja uma exceção ativa aberta pelo Admin:
+  - O sistema remove o bloqueio de apenas leitura e libera as edições do Diretor.
+  - Exibe um **banner verde dinâmico** informando que o lançamento está autorizado por exceção administrativa, apresentando a data limite exata e a justificativa cadastrada pelo Admin.
+
+---
+
 ## 🧪 Como Verificar e Validar cada Funcionalidade
 
 1. **Aceder via Celular (ou ferramenta de desenvolvimento do navegador):**
@@ -81,6 +97,9 @@ O menu de **Declaração Individual (Falha no Lançamento)** em `RelatoriosPage.
    - Navegue até *Relatórios e Folhas* e comprove que a opção já está marcada e os cabeçalhos das tabelas foram alterados automaticamente de `AP/AD` para `VP/VD`.
 4. **Validar Impressão Individual:**
    - Em *Relatórios*, selecione um curso, ative a *Declaração Individual (Falha)*, escolha um docente cadastrado e verifique que a tabela gerada para impressão possui todas as colunas semanais estruturadas perfeitamente.
+5. **Validar Abertura de Exceções:**
+   - Como Administrador, aceda a *Configurações* e cadastre uma exceção de prazo para o curso de Engenharia Informática para o mês atual.
+   - Faça login como Diretor de Informática e comprove que o lançamento para o mês correspondente foi liberado, exibindo o banner verde de exceção ativa.
 
 ---
 
@@ -94,7 +113,7 @@ Para continuar a elevar o nível tecnológico do SGFS do ISPT, sugerimos as segu
 | :--- | :---: | :---: | :---: | :--- |
 | **1. Fluxo de Submissão e Aprovação de Folhas** | 🔥 **Alta** | Crítico | Médio-Alto | Elimina papelada física e formaliza aprovações digitais de folhas de horas. |
 | **2. Alertas e Notificações (E-mail e Internas)** | 🔥 **Alta** | Alto | Médio | Garante o cumprimento estrito do prazo regulamentar de lançamento (dias 1-15). |
-| **3. Exceções de Prazo de Edição Solicitadas via UI** | ⚡ **Média** | Alto | Baixo-Médio | Dá flexibilidade ao Admin para estender prazos a diretores específicos. |
+| **3. Exceções de Prazo de Edição Solicitadas via UI** | ✅ **Concluído** | Alto | Baixo-Médio | Dá flexibilidade ao Admin para estender prazos a diretores específicos (Implementado). |
 | **4. Dashboard Gráfico de Analytics (Analytics)** | ⚡ **Média** | Alto | Médio | Fornece visões de custos financeiros e taxas de faltas em tempo real. |
 | **5. Upload de Comprovativos de Faltas Justificadas** | 💤 **Baixa** | Médio | Médio | Centraliza atestados e justificações de horas não dadas. |
 | **6. Backup Automatizado de Segurança (DB)** | 💤 **Baixa** | Crítico | Baixo | Garante a integridade dos dados na base de dados SQLite do servidor. |
@@ -112,10 +131,6 @@ Para continuar a elevar o nível tecnológico do SGFS do ISPT, sugerimos as segu
 * **Benefício:** Aumenta a pontualidade e reduz atrasos nos envios.
 
 #### ⚡ PRIORIDADE MÉDIA (Foco em Inteligência de Negócio e Gestão)
-
-##### 3. Abertura de Exceções de Prazo sob Demanda
-* **Funcionamento:** O Administrador pode, através de uma simples tela administrativa, estender temporariamente o prazo de edição de uma folha de um curso específico (ex: *"Dar 48h de prazo extra de edição ao Curso de Informática"*).
-* **Benefício:** Evita edições manuais direto no banco de dados em situações excepcionais.
 
 ##### 4. Dashboard Gráfico de Analytics (com Recharts)
 * **Funcionamento:** Exibição de gráficos de barras e linhas mostrando gastos com pagamento por curso, taxa de comparecimento (aulas dadas vs. programadas) e volume de vigias de exames.
