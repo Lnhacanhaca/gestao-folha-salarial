@@ -37,6 +37,13 @@ const checkHasActiveException = async (curso_id, mes, ano) => {
 
 const importar = async (req, res, next) => {
   const { mes, ano, curso_id, dados } = req.body;
+  console.log('--- IMPORTAR REQUEST BODY ---');
+  console.log('mes:', mes, 'ano:', ano, 'curso_id:', curso_id);
+  console.log('dados length:', dados ? dados.length : 0);
+  if (dados && dados.length > 0) {
+    console.log('dados[0] semanas:', JSON.stringify(dados[0].semanas));
+  }
+  console.log('-----------------------------');
   
   if (parseInt(curso_id) === 1) {
     return res.status(400).json({ error: 'Não é permitido fazer lançamentos directos na vista Geral Consolidada.' });
@@ -50,7 +57,10 @@ const importar = async (req, res, next) => {
   }
 
 
-  // Validate inputs
+    // Validate and sanitize input arrays
+    if (!Array.isArray(dados) || dados.length === 0) {
+      return res.status(400).json({ error: 'Payload inválido: campo "dados" deve ser um array não vazio.' });
+    }
   if (dados && Array.isArray(dados)) {
     for (const item of dados) {
       if (item.semanas && Array.isArray(item.semanas)) {
@@ -74,26 +84,38 @@ const importar = async (req, res, next) => {
   try {
 
     for (const item of dados) {
+      const semanas = Array.isArray(item.semanas) ? item.semanas : [];
+      // Calculate Totals using safe array
+      const total_ap = semanas.reduce((acc, s) => acc + (parseFloat(s.ap) || 0), 0);
+      const total_ad = semanas.reduce((acc, s) => acc + (parseFloat(s.ad) || 0), 0);
+      const total_vp = semanas.reduce((acc, s) => acc + (parseFloat(s.vp) || 0), 0);
+      const total_vd = semanas.reduce((acc, s) => acc + (parseFloat(s.vd) || 0), 0);
+      const valor_receber = (total_ad + total_vd) * 500;
+
+      const isPostgres = db.client.config.client === 'pg';
+
       const trimmedNome = item.docente_nome.trim();
       let docente = await trx('docentes')
         .whereRaw('LOWER(nome) = ?', [trimmedNome.toLowerCase()])
         .first();
       if (!docente) {
-        // Fetch generated ID safely
-        const [insertedId] = await trx('docentes').insert({ nome: trimmedNome });
-        docente = await trx('docentes').where({ id: insertedId }).first();
+        if (isPostgres) {
+          const [inserted] = await trx('docentes').insert({ nome: trimmedNome }).returning('*');
+          docente = inserted;
+        } else {
+          const [insertedId] = await trx('docentes').insert({ nome: trimmedNome });
+          docente = await trx('docentes').where({ id: insertedId }).first();
+        }
       }
 
-      // Calculate Totals
-      const total_ap = item.semanas.reduce((acc, s) => acc + (parseFloat(s.ap) || 0), 0);
-      const total_ad = item.semanas.reduce((acc, s) => acc + (parseFloat(s.ad) || 0), 0);
-      const total_vp = item.semanas.reduce((acc, s) => acc + (parseFloat(s.vp) || 0), 0);
-      const total_vd = item.semanas.reduce((acc, s) => acc + (parseFloat(s.vd) || 0), 0);
-      const valor_receber = (total_ad + total_vd) * 500;
 
-      // Upsert Folha
       let folha = await trx('folhas')
-        .where({ docente_id: docente.id, mes, ano, curso_id })
+        .where({
+          docente_id: docente.id,
+          mes: parseInt(mes),
+          ano: parseInt(ano),
+          curso_id: parseInt(curso_id)
+        })
         .first();
 
       if (folha) {
@@ -107,26 +129,44 @@ const importar = async (req, res, next) => {
           observacoes: item.observacoes || null,
           updated_at: new Date()
         });
-        // Clear details to re-insert
+        // Clear details to re‑insert
         await trx('folha_detalhes').where({ folha_id: folha.id }).del();
       } else {
-        const [insertedFolhaId] = await trx('folhas').insert({
-          docente_id: docente.id,
-          curso_id,
-          mes,
-          ano,
-          total_ap,
-          total_ad,
-          total_vp,
-          total_vd,
-          valor_receber,
-          retificada: item.retificada ? 1 : 0,
-          observacoes: item.observacoes || null
-        });
-        folha = await trx('folhas').where({ id: insertedFolhaId }).first();
+        if (isPostgres) {
+          const [inserted] = await trx('folhas').insert({
+            docente_id: docente.id,
+            curso_id: parseInt(curso_id),
+            mes: parseInt(mes),
+            ano: parseInt(ano),
+            total_ap,
+            total_ad,
+            total_vp,
+            total_vd,
+            valor_receber,
+            retificada: item.retificada ? 1 : 0,
+            observacoes: item.observacoes || null
+          }).returning('*');
+          folha = inserted;
+        } else {
+          const [insertedFolhaId] = await trx('folhas').insert({
+            docente_id: docente.id,
+            curso_id: parseInt(curso_id),
+            mes: parseInt(mes),
+            ano: parseInt(ano),
+            total_ap,
+            total_ad,
+            total_vp,
+            total_vd,
+            valor_receber,
+            retificada: item.retificada ? 1 : 0,
+            observacoes: item.observacoes || null
+          });
+          folha = await trx('folhas').where({ id: insertedFolhaId }).first();
+        }
       }
 
-      const detalhes = item.semanas.map(s => ({
+      // Build detalhes safely – ensure semanas is an array
+      const detalhes = semanas.map(s => ({
         folha_id: folha.id,
         semana: s.semana,
         ap: s.ap,
@@ -174,9 +214,18 @@ const getByCurso = async (req, res, next) => {
 
     const activeSemestre = (Number(mes) >= 7 && Number(mes) <= 12) ? 2 : 1;
 
-    // 1. Fetch all docentes who are registered for these courses in their profile
+    // 2. Fetch all saved sheets belonging to any of the target courses for this month/year
+    const savedFolhas = await db('folhas as f')
+      .select('f.*')
+      .where({ 'f.mes': parseInt(mes), 'f.ano': parseInt(ano) })
+      .whereIn('f.curso_id', targetCursoIds);
+
+    const savedDocenteIds = savedFolhas.map(f => f.docente_id);
+
+    // 1. Fetch all docentes and filter to keep those assigned in profile OR who have saved sheets
     const docentes = await db('docentes').select('*').orderBy('nome', 'asc');
     const courseDocentes = docentes.filter(doc => {
+      if (savedDocenteIds.includes(doc.id)) return true;
       try {
         let cursosArray = [];
         if (typeof doc.cursos === 'string') {
@@ -192,15 +241,6 @@ const getByCurso = async (req, res, next) => {
         return false;
       }
     });
-
-    const courseDocenteIds = courseDocentes.map(d => d.id);
-
-    // 2. Fetch sheets belonging to any of the target courses for this month/year
-    const savedFolhas = courseDocenteIds.length > 0 ? await db('folhas as f')
-      .select('f.*')
-      .where({ 'f.mes': mes, 'f.ano': ano })
-      .whereIn('f.curso_id', targetCursoIds)
-      .whereIn('f.docente_id', courseDocenteIds) : [];
 
     const folha_ids = savedFolhas.map(f => f.id);
     const detalhes = folha_ids.length > 0 ? await db('folha_detalhes').whereIn('folha_id', folha_ids) : [];
@@ -224,9 +264,9 @@ const getByCurso = async (req, res, next) => {
         });
       } catch (e) {}
 
-      // Find saved sheets for this teacher and only allow courses they teach in active semester
+      // Find saved sheets for this teacher
       const teacherFolhas = savedFolhas.filter(f => f.docente_id === doc.id);
-      const validTeacherFolhas = teacherFolhas.filter(f => activeCursoIds.includes(f.curso_id));
+      const savedCursoIds = teacherFolhas.map(f => f.curso_id);
 
       // Weeks initialization
       const semanas = [
@@ -240,11 +280,14 @@ const getByCurso = async (req, res, next) => {
       let retificada = 0;
       let observacoes = [];
 
-      // Loop through target course IDs that the teacher teaches in the active semester
-      const queryActiveCursos = targetCursoIds.filter(cid => activeCursoIds.includes(cid));
+      // Loop through course IDs that are either active in their profile or they have saved sheets for
+      const queryActiveCursos = Array.from(new Set([
+        ...targetCursoIds.filter(cid => activeCursoIds.includes(cid)),
+        ...savedCursoIds
+      ]));
 
       queryActiveCursos.forEach(cid => {
-        const f = validTeacherFolhas.find(fol => fol.curso_id === cid);
+        const f = teacherFolhas.find(fol => fol.curso_id === cid);
         if (f) {
           retificada = retificada || f.retificada || 0;
           if (f.observacoes) observacoes.push(f.observacoes);
@@ -336,7 +379,7 @@ const getGeral = async (req, res, next) => {
     // 2. Fetch all saved sheets for this month/year
     const savedFolhas = await db('folhas as f')
       .select('f.*')
-      .where({ 'f.mes': mes, 'f.ano': ano });
+      .where({ 'f.mes': parseInt(mes), 'f.ano': parseInt(ano) });
 
     const folha_ids = savedFolhas.map(f => f.id);
     const detalhes = folha_ids.length > 0 ? await db('folha_detalhes').whereIn('folha_id', folha_ids) : [];
@@ -364,9 +407,9 @@ const getGeral = async (req, res, next) => {
         });
       } catch (e) {}
 
-      // Find all saved sheets for this teacher in this month/year and only allow courses they teach in active semester
+      // Find all saved sheets for this teacher
       const teacherFolhas = savedFolhas.filter(f => f.docente_id === doc.id);
-      const validTeacherFolhas = teacherFolhas.filter(f => activeCursoIds.includes(f.curso_id));
+      const savedCursoIds = teacherFolhas.map(f => f.curso_id);
       
       let total_ad = 0;
       let retificada = 0;
@@ -381,9 +424,14 @@ const getGeral = async (req, res, next) => {
         { semana: 5, ap: 0, ad: 0, vp: 0, vd: 0 }
       ];
 
-      // Loop through all course IDs that the teacher teaches in the active semester
-      activeCursoIds.forEach(cid => {
-        const f = validTeacherFolhas.find(fol => fol.curso_id === cid);
+      // Loop through all course IDs that the teacher teaches in the active semester or has saved sheets for
+      const queryActiveCursos = Array.from(new Set([
+        ...activeCursoIds,
+        ...savedCursoIds
+      ]));
+
+      queryActiveCursos.forEach(cid => {
+        const f = teacherFolhas.find(fol => fol.curso_id === cid);
         if (f) {
           retificada = retificada || f.retificada || 0;
           if (f.observacoes) observacoes.push(f.observacoes);
@@ -485,7 +533,12 @@ const deletarDocenteFolha = async (req, res, next) => {
 
     if (docente) {
       const folha = await trx('folhas')
-        .where({ docente_id: docente.id, mes, ano, curso_id })
+        .where({
+          docente_id: docente.id,
+          mes: parseInt(mes),
+          ano: parseInt(ano),
+          curso_id: parseInt(curso_id)
+        })
         .first();
 
       if (folha) {
@@ -534,8 +587,8 @@ const getAnalytics = async (req, res, next) => {
     folhas.forEach(f => {
       const monthIndex = f.mes - 1;
       if (monthIndex >= 0 && monthIndex < 12) {
-        evolutionByMonth[monthIndex].total_ap += f.total_ap || 0;
-        evolutionByMonth[monthIndex].total_ad += f.total_ad || 0;
+        evolutionByMonth[monthIndex].total_ap += (f.total_ap || 0) + (f.total_vp || 0);
+        evolutionByMonth[monthIndex].total_ad += (f.total_ad || 0) + (f.total_vd || 0);
         evolutionByMonth[monthIndex].custo_total += f.valor_receber || 0;
       }
 
