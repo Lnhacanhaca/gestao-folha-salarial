@@ -92,13 +92,27 @@ const criarExcecao = async (req, res, next) => {
       return res.status(400).json({ error: 'Os campos curso_id, mes, ano e data_limite são obrigatórios.' });
     }
 
-    const [id] = await db('excecoes_prazos').insert({
-      curso_id: parseInt(curso_id),
-      mes: parseInt(mes),
-      ano: parseInt(ano),
-      data_limite,
-      motivo: motivo || null
-    });
+    const isPostgres = db.client.config.client === 'pg';
+    let id;
+    if (isPostgres) {
+      const [inserted] = await db('excecoes_prazos').insert({
+        curso_id: parseInt(curso_id),
+        mes: parseInt(mes),
+        ano: parseInt(ano),
+        data_limite,
+        motivo: motivo || null
+      }).returning('*');
+      id = inserted.id;
+    } else {
+      const [insertedId] = await db('excecoes_prazos').insert({
+        curso_id: parseInt(curso_id),
+        mes: parseInt(mes),
+        ano: parseInt(ano),
+        data_limite,
+        motivo: motivo || null
+      });
+      id = insertedId;
+    }
 
     await logAction({
       userId: req.user.id,
