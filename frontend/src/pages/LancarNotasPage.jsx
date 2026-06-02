@@ -61,10 +61,38 @@ const isLaunchWindowOpen = (targetMes, targetAno) => {
   return curYear === supYear && curMonth === supMonth && curDay >= 1 && curDay <= 15;
 };
 
+const formatarFaltas = (horasFalta) => {
+  if (horasFalta <= 0) return "0h (0 faltas)";
+  const numFaltas = horasFalta / 2;
+  const faltasStr = Number.isInteger(numFaltas) ? numFaltas.toString() : numFaltas.toFixed(1);
+  return `${horasFalta}h (${faltasStr} ${numFaltas === 1 ? 'falta' : 'faltas'})`;
+};
+
 const LancarNotasPage = () => {
   const { user } = useAuth();
-  const [mes, setMes] = useState(() => parseInt(localStorage.getItem('sgfs_mes')) || new Date().getMonth() + 1);
-  const [ano, setAno] = useState(() => parseInt(localStorage.getItem('sgfs_ano')) || new Date().getFullYear());
+  const [mes, setMes] = useState(() => {
+    const saved = localStorage.getItem('sgfs_mes');
+    if (saved) return parseInt(saved);
+    const now = new Date();
+    let m = now.getMonth() + 1;
+    if (now.getDate() <= 15) {
+      m = m - 1;
+      if (m === 0) m = 12;
+    }
+    return m;
+  });
+  const [ano, setAno] = useState(() => {
+    const saved = localStorage.getItem('sgfs_ano');
+    if (saved) return parseInt(saved);
+    const now = new Date();
+    let m = now.getMonth() + 1;
+    let y = now.getFullYear();
+    if (now.getDate() <= 15) {
+      m = m - 1;
+      if (m === 0) y = y - 1;
+    }
+    return y;
+  });
   const [cursoId, setCursoId] = useState(2);
   const [dados, setDados] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -467,6 +495,17 @@ const LancarNotasPage = () => {
 
   const calculateTotal = (semanas, field) => {
     return semanas.reduce((acc, s) => acc + (s[field] || 0), 0);
+  };
+
+  const calculateTotalFaltasHoras = (semanas) => {
+    if (!semanas || !Array.isArray(semanas)) return 0;
+    return semanas.reduce((acc, s) => {
+      const isExamWeek = (s.vp > 0 || s.vd > 0);
+      if (isExamWeek) return acc;
+      const ap = parseFloat(s.ap) || 0;
+      const ad = parseFloat(s.ad) || 0;
+      return acc + Math.max(0, ap - ad);
+    }, 0);
   };
 
   const weekRanges = getWeeksDateRanges(mes, ano);
@@ -883,7 +922,7 @@ const LancarNotasPage = () => {
                   <div>
                     <span className="text-[10px] uppercase font-bold text-rose-500 block">Previsão Faltas</span>
                     <span className="text-lg font-black text-rose-600">
-                      {Math.max(0, calculateTotal(selectedDocente.semanas, 'ap') - calculateTotal(selectedDocente.semanas, 'ad'))}h
+                      {formatarFaltas(calculateTotalFaltasHoras(selectedDocente.semanas))}
                     </span>
                   </div>
                   <div className="w-px h-8 bg-muted" />
@@ -922,6 +961,9 @@ const LancarNotasPage = () => {
                   ))}
                   <th className="p-4 font-bold text-sm text-center border-l bg-primary/5" colSpan={2}>
                     Total Mensal
+                  </th>
+                  <th className="p-4 font-bold text-sm text-center border-l bg-rose-50 text-rose-800" rowSpan={2}>
+                    Faltas
                   </th>
                   <th className="p-4 w-24 text-center">Ações</th>
                 </tr>
@@ -987,6 +1029,9 @@ const LancarNotasPage = () => {
                     </td>
                     <td className="p-2 bg-primary/5 text-center font-bold text-primary">
                       {calculateTotal(doc.semanas, 'ad')}
+                    </td>
+                    <td className="p-2 border-l bg-rose-50/50 text-center font-semibold text-rose-600 text-xs">
+                      {formatarFaltas(calculateTotalFaltasHoras(doc.semanas))}
                     </td>
                     <td className="p-2 text-center flex items-center justify-center gap-1">
                       <button 

@@ -52,10 +52,34 @@ const formatarValor = (valor) => {
   return `${inteiroFormatado},${decimal} Mt`;
 };
 
+const formatarFaltas = (horasFalta) => {
+  if (horasFalta <= 0) return "-";
+  const numFaltas = horasFalta / 2;
+  const faltasStr = Number.isInteger(numFaltas) ? numFaltas.toString() : numFaltas.toFixed(1);
+  return `${horasFalta}h (${faltasStr} ${numFaltas === 1 ? 'falta' : 'faltas'})`;
+};
+
 const RelatoriosPage = () => {
   const { user } = useAuth();
-  const [mes, setMes] = useState(new Date().getMonth() + 1);
-  const [ano, setAno] = useState(new Date().getFullYear());
+  const [mes, setMes] = useState(() => {
+    const now = new Date();
+    let m = now.getMonth() + 1;
+    if (now.getDate() <= 15) {
+      m = m - 1;
+      if (m === 0) m = 12;
+    }
+    return m;
+  });
+  const [ano, setAno] = useState(() => {
+    const now = new Date();
+    let m = now.getMonth() + 1;
+    let y = now.getFullYear();
+    if (now.getDate() <= 15) {
+      m = m - 1;
+      if (m === 0) y = y - 1;
+    }
+    return y;
+  });
   const [cursoId, setCursoId] = useState(() => {
     if (user && user.role !== 'ADMIN') return dbCursoIdToReportId(user.curso_id);
     return 1;
@@ -71,9 +95,55 @@ const RelatoriosPage = () => {
   const [falhaDocenteIdx, setFalhaDocenteIdx] = useState('');
   const [falhaJustificacao, setFalhaJustificacao] = useState('O docente submeteu a folha de presenças fora do prazo estabelecido. Solicita-se a aprovação e o respectivo pagamento das horas listadas abaixo.');
 
-  const totalGeralAd = dados.reduce((acc, r) => acc + (r.total_ad || 0), 0);
-  const totalGeralVd = dados.reduce((acc, r) => acc + (r.total_vd || 0), 0);
-  const valorTotalMts = (totalGeralAd + totalGeralVd) * 500;
+  const getIsExamWeek = (wIdx) => {
+    if (!showVigias) return false;
+    return dados.some(row => {
+      const s = row.semanas?.[wIdx];
+      return (s?.vp > 0 || s?.vd > 0);
+    });
+  };
+
+  const getWeekProgramadas = (row, wIdx) => {
+    const s = row.semanas?.[wIdx];
+    return getIsExamWeek(wIdx) ? (s?.vp || 0) : (s?.ap || 0);
+  };
+
+  const getWeekDadas = (row, wIdx) => {
+    const s = row.semanas?.[wIdx];
+    return getIsExamWeek(wIdx) ? (s?.vd || 0) : (s?.ad || 0);
+  };
+
+  const getDocenteTotalProgramadas = (row) => {
+    let tot = 0;
+    for (let i = 0; i < 5; i++) {
+      tot += getWeekProgramadas(row, i);
+    }
+    return tot;
+  };
+
+  const getDocenteTotalDadas = (row) => {
+    let tot = 0;
+    for (let i = 0; i < 5; i++) {
+      tot += getWeekDadas(row, i);
+    }
+    return tot;
+  };
+
+  const getDocenteTotalFaltasHoras = (row) => {
+    let tot = 0;
+    for (let i = 0; i < 5; i++) {
+      if (!getIsExamWeek(i)) {
+        const s = row.semanas?.[i];
+        const ap = s?.ap || 0;
+        const ad = s?.ad || 0;
+        tot += Math.max(0, ap - ad);
+      }
+    }
+    return tot;
+  };
+
+  const totalGeralDadas = dados.reduce((acc, r) => acc + getDocenteTotalDadas(r), 0);
+  const valorTotalMts = totalGeralDadas * 500;
   const valorExtenso = numeroPorExtenso(valorTotalMts);
 
   const meses = [
@@ -112,36 +182,6 @@ const RelatoriosPage = () => {
   }, [cursoId]);
 
   const weekRanges = getWeeksDateRanges(mes, ano);
-
-  const renderProgramadasCell = (ap, vp) => {
-    if (!showVigias) return ap || 0;
-    if (ap > 0 && vp > 0) {
-      return (
-        <div className="flex flex-col text-[9px] leading-tight py-0.5">
-          <span>AP: {ap}</span>
-          <span className="text-slate-500 font-normal">VP: {vp}</span>
-        </div>
-      );
-    }
-    if (vp > 0) return `VP: ${vp}`;
-    if (ap > 0) return `AP: ${ap}`;
-    return 0;
-  };
-
-  const renderDadasCell = (ad, vd) => {
-    if (!showVigias) return ad || 0;
-    if (ad > 0 && vd > 0) {
-      return (
-        <div className="flex flex-col text-[9px] leading-tight py-0.5 font-bold">
-          <span className="text-primary">AD: {ad}</span>
-          <span className="text-amber-600">VD: {vd}</span>
-        </div>
-      );
-    }
-    if (vd > 0) return <span className="text-amber-600 font-bold">VD: {vd}</span>;
-    if (ad > 0) return <span className="text-primary font-bold">AD: {ad}</span>;
-    return 0;
-  };
 
   return (
     <div className="space-y-6">
@@ -358,7 +398,7 @@ const RelatoriosPage = () => {
 
       {/* Ofício - Print Ready (Only for Geral) */}
       {cursoId === 1 && !loading && viewMode === 'oficio' && (
-        <div className="bg-white text-black p-4 sm:p-8 border-0 shadow-none min-h-[1000px] flex flex-col justify-between print:p-0 print:border-0 print:shadow-none w-full overflow-x-auto">
+        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[1000px] flex flex-col justify-between print:p-0 print:border-0 print:shadow-none w-full max-w-[850px] mx-auto print:max-w-none overflow-x-auto">
           <div className="min-w-[800px] print:min-w-0">
             <div className="text-center mb-8">
               <img src="/emblema.png" alt="República de Moçambique" className="h-24 mx-auto mb-2 object-contain" />
@@ -416,7 +456,7 @@ const RelatoriosPage = () => {
 
       {/* Report Sheet - Print Ready */}
       {viewMode === 'folha' && (
-        <div className="bg-white text-black p-4 sm:p-8 border-0 shadow-none min-h-[1000px] print:p-0 print:border-0 print:shadow-none w-full">
+        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[1000px] print:p-0 print:border-0 print:shadow-none w-full max-w-[1100px] mx-auto print:max-w-none">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-2">
               <img src="/logo.png" alt="Instituto Superior Politécnico de Tete" className="h-16 object-contain" />
@@ -444,12 +484,10 @@ const RelatoriosPage = () => {
                   <thead>
                     <tr className="bg-gray-200 border-2 border-black">
                       <th rowSpan={3} className="p-1.5 border-2 border-black w-8">Nº</th>
-                      <th rowSpan={3} className="p-1.5 border-2 border-black w-56 text-left">Docentes</th>
-                      <th colSpan={10} className="p-1.5 border-2 border-black">Aulas Mensais</th>
-                      <th colSpan={showVigias ? 4 : 2} rowSpan={1} className="p-1.5 border-2 border-black">
-                        {showVigias ? 'Totais (Aulas & Vigias)' : 'Totais (Aulas)'}
-                      </th>
-                      <th colSpan={1} rowSpan={2} className="p-1.5 border-2 border-black">Valor a Receber</th>
+                      <th rowSpan={3} className="p-1.5 border-2 border-black w-44 text-left">Docentes</th>
+                      <th colSpan={10} className="p-1.5 border-2 border-black">Aulas / Vigias Mensais</th>
+                      <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Totais</th>
+                      <th colSpan={1} rowSpan={3} className="p-1.5 border-2 border-black w-24">Valor a Receber</th>
                     </tr>
                     <tr className="bg-gray-200 border-2 border-black">
                       <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
@@ -472,43 +510,28 @@ const RelatoriosPage = () => {
                         5ª Semana
                         <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[4]})</span>
                       </th>
-                      <th colSpan={2} className="p-1 border-2 border-black text-[9px] w-16">Total Aulas</th>
-                      {showVigias && <th colSpan={2} className="p-1 border-2 border-black text-[9px] w-16">Total Vigias</th>}
                     </tr>
                     <tr className="bg-gray-200 border-2 border-black text-[9px]">
-                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
-                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
-                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
-                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
-                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
-                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
-                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
-                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
-                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
-                      <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
-                      <th className="p-1 border-2 border-black">AP</th>
-                      <th className="p-1 border-2 border-black">AD</th>
-                      {showVigias && (
-                        <>
-                          <th className="p-1 border-2 border-black">VP</th>
-                          <th className="p-1 border-2 border-black">VD</th>
-                        </>
-                      )}
+                      <th className="p-1 border-2 border-black w-8">{getIsExamWeek(0) ? 'VP' : 'AP'}</th>
+                      <th className="p-1 border-2 border-black w-8">{getIsExamWeek(0) ? 'VD' : 'AD'}</th>
+                      <th className="p-1 border-2 border-black w-8">{getIsExamWeek(1) ? 'VP' : 'AP'}</th>
+                      <th className="p-1 border-2 border-black w-8">{getIsExamWeek(1) ? 'VD' : 'AD'}</th>
+                      <th className="p-1 border-2 border-black w-8">{getIsExamWeek(2) ? 'VP' : 'AP'}</th>
+                      <th className="p-1 border-2 border-black w-8">{getIsExamWeek(2) ? 'VD' : 'AD'}</th>
+                      <th className="p-1 border-2 border-black w-8">{getIsExamWeek(3) ? 'VP' : 'AP'}</th>
+                      <th className="p-1 border-2 border-black w-8">{getIsExamWeek(3) ? 'VD' : 'AD'}</th>
+                      <th className="p-1 border-2 border-black w-8">{getIsExamWeek(4) ? 'VP' : 'AP'}</th>
+                      <th className="p-1 border-2 border-black w-8">{getIsExamWeek(4) ? 'VD' : 'AD'}</th>
+                      <th className="p-1 border-2 border-black w-8">AP/VP</th>
+                      <th className="p-1 border-2 border-black w-8">AD/VD</th>
                     </tr>
                   </thead>
                   <tbody>
                     {dados.map((row, idx) => {
-                      const s = row.semanas || Array(5).fill({ap: 0, ad: 0, vp: 0, vd: 0});
-                      const s1 = s[0] || {ap: 0, ad: 0, vp: 0, vd: 0};
-                      const s2 = s[1] || {ap: 0, ad: 0, vp: 0, vd: 0};
-                      const s3 = s[2] || {ap: 0, ad: 0, vp: 0, vd: 0};
-                      const s4 = s[3] || {ap: 0, ad: 0, vp: 0, vd: 0};
-                      const s5 = s[4] || {ap: 0, ad: 0, vp: 0, vd: 0};
-
                       return (
                         <tr key={idx} className="border-2 border-black hover:bg-gray-50">
                           <td className="p-1.5 border-2 border-black">{idx + 1}</td>
-                          <td className="p-1.5 border-2 border-black text-left font-medium">
+                          <td className="p-1.5 border-2 border-black text-left font-medium w-44">
                             {row.docente_nome}
                             {(row.retificada === 1 || row.retificada === true) && (
                               <span className="text-[8px] text-amber-600 font-extrabold ml-1 print:text-black">
@@ -517,28 +540,22 @@ const RelatoriosPage = () => {
                             )}
                           </td>
                           
-                          <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s1.ap, s1.vp)}</td>
-                          <td className="p-1.5 border-2 border-black">{renderDadasCell(s1.ad, s1.vd)}</td>
-                          <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s2.ap, s2.vp)}</td>
-                          <td className="p-1.5 border-2 border-black">{renderDadasCell(s2.ad, s2.vd)}</td>
-                          <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s3.ap, s3.vp)}</td>
-                          <td className="p-1.5 border-2 border-black">{renderDadasCell(s3.ad, s3.vd)}</td>
-                          <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s4.ap, s4.vp)}</td>
-                          <td className="p-1.5 border-2 border-black">{renderDadasCell(s4.ad, s4.vd)}</td>
-                          <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s5.ap, s5.vp)}</td>
-                          <td className="p-1.5 border-2 border-black">{renderDadasCell(s5.ad, s5.vd)}</td>
+                          <td className="p-1.5 border-2 border-black">{getWeekProgramadas(row, 0)}</td>
+                          <td className="p-1.5 border-2 border-black">{getWeekDadas(row, 0)}</td>
+                          <td className="p-1.5 border-2 border-black">{getWeekProgramadas(row, 1)}</td>
+                          <td className="p-1.5 border-2 border-black">{getWeekDadas(row, 1)}</td>
+                          <td className="p-1.5 border-2 border-black">{getWeekProgramadas(row, 2)}</td>
+                          <td className="p-1.5 border-2 border-black">{getWeekDadas(row, 2)}</td>
+                          <td className="p-1.5 border-2 border-black">{getWeekProgramadas(row, 3)}</td>
+                          <td className="p-1.5 border-2 border-black">{getWeekDadas(row, 3)}</td>
+                          <td className="p-1.5 border-2 border-black">{getWeekProgramadas(row, 4)}</td>
+                          <td className="p-1.5 border-2 border-black">{getWeekDadas(row, 4)}</td>
 
-                          <td className="p-1.5 border-2 border-black font-semibold">{row.total_ap}</td>
-                          <td className="p-1.5 border-2 border-black font-extrabold">{row.total_ad}</td>
-                          {showVigias && (
-                            <>
-                              <td className="p-1.5 border-2 border-black font-semibold">{row.total_vp || 0}</td>
-                              <td className="p-1.5 border-2 border-black font-extrabold">{row.total_vd || 0}</td>
-                            </>
-                          )}
+                           <td className="p-1.5 border-2 border-black font-semibold">{getDocenteTotalProgramadas(row)}</td>
+                          <td className="p-1.5 border-2 border-black font-extrabold">{getDocenteTotalDadas(row)}</td>
                           
                           <td className="p-1.5 border-2 border-black font-extrabold">
-                            {formatarValor(((row.total_ad || 0) + (row.total_vd || 0)) * 500)}
+                            {formatarValor(getDocenteTotalDadas(row) * 500)}
                           </td>
                         </tr>
                       );
@@ -548,77 +565,41 @@ const RelatoriosPage = () => {
                       <td colSpan={2} className="p-1.5 text-center">Total Geral</td>
                       
                       <td className="p-1.5 border-2 border-black">
-                        {renderProgramadasCell(
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ap) || 0), 0),
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.vp) || 0), 0)
-                        )}
+                        {dados.reduce((acc, row) => acc + getWeekProgramadas(row, 0), 0)}
                       </td>
                       <td className="p-1.5 border-2 border-black">
-                        {renderDadasCell(
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.ad) || 0), 0),
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[0]?.vd) || 0), 0)
-                        )}
+                        {dados.reduce((acc, row) => acc + getWeekDadas(row, 0), 0)}
                       </td>
                       <td className="p-1.5 border-2 border-black">
-                        {renderProgramadasCell(
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ap) || 0), 0),
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.vp) || 0), 0)
-                        )}
+                        {dados.reduce((acc, row) => acc + getWeekProgramadas(row, 1), 0)}
                       </td>
                       <td className="p-1.5 border-2 border-black">
-                        {renderDadasCell(
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.ad) || 0), 0),
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[1]?.vd) || 0), 0)
-                        )}
+                        {dados.reduce((acc, row) => acc + getWeekDadas(row, 1), 0)}
                       </td>
                       <td className="p-1.5 border-2 border-black">
-                        {renderProgramadasCell(
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ap) || 0), 0),
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.vp) || 0), 0)
-                        )}
+                        {dados.reduce((acc, row) => acc + getWeekProgramadas(row, 2), 0)}
                       </td>
                       <td className="p-1.5 border-2 border-black">
-                        {renderDadasCell(
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.ad) || 0), 0),
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[2]?.vd) || 0), 0)
-                        )}
+                        {dados.reduce((acc, row) => acc + getWeekDadas(row, 2), 0)}
                       </td>
                       <td className="p-1.5 border-2 border-black">
-                        {renderProgramadasCell(
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ap) || 0), 0),
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.vp) || 0), 0)
-                        )}
+                        {dados.reduce((acc, row) => acc + getWeekProgramadas(row, 3), 0)}
                       </td>
                       <td className="p-1.5 border-2 border-black">
-                        {renderDadasCell(
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.ad) || 0), 0),
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[3]?.vd) || 0), 0)
-                        )}
+                        {dados.reduce((acc, row) => acc + getWeekDadas(row, 3), 0)}
                       </td>
                       <td className="p-1.5 border-2 border-black">
-                        {renderProgramadasCell(
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ap) || 0), 0),
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.vp) || 0), 0)
-                        )}
+                        {dados.reduce((acc, row) => acc + getWeekProgramadas(row, 4), 0)}
                       </td>
                       <td className="p-1.5 border-2 border-black">
-                        {renderDadasCell(
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.ad) || 0), 0),
-                          dados.reduce((acc, r) => acc + ((r.semanas?.[4]?.vd) || 0), 0)
-                        )}
+                        {dados.reduce((acc, row) => acc + getWeekDadas(row, 4), 0)}
                       </td>
 
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ap || 0), 0)}</td>
-                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_ad || 0), 0)}</td>
-                      {showVigias && (
-                        <>
-                          <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_vp || 0), 0)}</td>
-                          <td className="p-1.5 border-2 border-black">{dados.reduce((acc, r) => acc + (r.total_vd || 0), 0)}</td>
-                        </>
-                      )}
+                       <td className="p-1.5 border-2 border-black">{dados.reduce((acc, row) => acc + getDocenteTotalProgramadas(row), 0)}</td>
+                      <td className="p-1.5 border-2 border-black">{dados.reduce((acc, row) => acc + getDocenteTotalDadas(row), 0)}</td>
                       
                       <td className="p-1.5 border-2 border-black bg-yellow-100 text-[11px] font-black text-black">
-                        {formatarValor((dados.reduce((acc, r) => acc + (r.total_ad || 0), 0) + dados.reduce((acc, r) => acc + (r.total_vd || 0), 0)) * 500)}
+                        {formatarValor(totalGeralDadas * 500)}
                       </td>
                     </tr>
                   </tbody>
@@ -761,7 +742,7 @@ const RelatoriosPage = () => {
 
       {/* Falha Print Template */}
       {viewMode === 'falha' && dados[falhaDocenteIdx] && (
-        <div className="bg-white text-black p-4 sm:p-8 border-0 shadow-none min-h-[1000px] flex flex-col print:p-0 print:border-0 print:shadow-none w-full relative">
+        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[1000px] flex flex-col print:p-0 print:border-0 print:shadow-none w-full max-w-[1100px] mx-auto print:max-w-none relative">
           <div className="text-center mb-8">
             <img src="/emblema.png" alt="República de Moçambique" className="h-24 mx-auto mb-2 object-contain" />
             <h2 className="font-bold uppercase text-sm tracking-wider">República de Moçambique</h2>
@@ -791,12 +772,10 @@ const RelatoriosPage = () => {
                 <thead>
                   <tr className="bg-gray-200 border-2 border-black">
                     <th rowSpan={3} className="p-1.5 border-2 border-black w-8">Nº</th>
-                    <th rowSpan={3} className="p-1.5 border-2 border-black w-56 text-left">Docentes</th>
-                    <th colSpan={10} className="p-1.5 border-2 border-black">Aulas Mensais</th>
-                    <th colSpan={showVigias ? 4 : 2} rowSpan={1} className="p-1.5 border-2 border-black">
-                      {showVigias ? 'Totais (Aulas & Vigias)' : 'Totais (Aulas)'}
-                    </th>
-                    <th colSpan={1} rowSpan={2} className="p-1.5 border-2 border-black">Valor a Receber</th>
+                    <th rowSpan={3} className="p-1.5 border-2 border-black w-44 text-left">Docentes</th>
+                    <th colSpan={10} className="p-1.5 border-2 border-black">Aulas / Vigias Mensais</th>
+                    <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Totais</th>
+                    <th colSpan={1} rowSpan={3} className="p-1.5 border-2 border-black w-24">Valor a Receber</th>
                   </tr>
                   <tr className="bg-gray-200 border-2 border-black">
                     <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
@@ -819,69 +798,48 @@ const RelatoriosPage = () => {
                       5ª Semana
                       <span className="block text-[8px] font-normal text-gray-500 print:text-black">({weekRanges[4]})</span>
                     </th>
-                    <th colSpan={2} className="p-1 border-2 border-black text-[9px] w-16">Total Aulas</th>
-                    {showVigias && <th colSpan={2} className="p-1 border-2 border-black text-[9px] w-16">Total Vigias</th>}
                   </tr>
                   <tr className="bg-gray-200 border-2 border-black text-[9px]">
-                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
-                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
-                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
-                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
-                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
-                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
-                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
-                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
-                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VP' : 'AP'}</th>
-                    <th className="p-1 border-2 border-black w-8">{showVigias ? 'VD' : 'AD'}</th>
-                    <th className="p-1 border-2 border-black">AP</th>
-                    <th className="p-1 border-2 border-black">AD</th>
-                    {showVigias && (
-                      <>
-                        <th className="p-1 border-2 border-black">VP</th>
-                        <th className="p-1 border-2 border-black">VD</th>
-                      </>
-                    )}
+                    <th className="p-1 border-2 border-black w-8">{getIsExamWeek(0) ? 'VP' : 'AP'}</th>
+                    <th className="p-1 border-2 border-black w-8">{getIsExamWeek(0) ? 'VD' : 'AD'}</th>
+                    <th className="p-1 border-2 border-black w-8">{getIsExamWeek(1) ? 'VP' : 'AP'}</th>
+                    <th className="p-1 border-2 border-black w-8">{getIsExamWeek(1) ? 'VD' : 'AD'}</th>
+                    <th className="p-1 border-2 border-black w-8">{getIsExamWeek(2) ? 'VP' : 'AP'}</th>
+                    <th className="p-1 border-2 border-black w-8">{getIsExamWeek(2) ? 'VD' : 'AD'}</th>
+                    <th className="p-1 border-2 border-black w-8">{getIsExamWeek(3) ? 'VP' : 'AP'}</th>
+                    <th className="p-1 border-2 border-black w-8">{getIsExamWeek(3) ? 'VD' : 'AD'}</th>
+                    <th className="p-1 border-2 border-black w-8">{getIsExamWeek(4) ? 'VP' : 'AP'}</th>
+                    <th className="p-1 border-2 border-black w-8">{getIsExamWeek(4) ? 'VD' : 'AD'}</th>
+                    <th className="p-1 border-2 border-black w-8">AP/VP</th>
+                    <th className="p-1 border-2 border-black w-8">AD/VD</th>
                   </tr>
                 </thead>
                 <tbody>
                   {(() => {
                     const row = dados[falhaDocenteIdx];
-                    const s = row.semanas || Array(5).fill({ap: 0, ad: 0, vp: 0, vd: 0});
-                    const s1 = s[0] || {ap: 0, ad: 0, vp: 0, vd: 0};
-                    const s2 = s[1] || {ap: 0, ad: 0, vp: 0, vd: 0};
-                    const s3 = s[2] || {ap: 0, ad: 0, vp: 0, vd: 0};
-                    const s4 = s[3] || {ap: 0, ad: 0, vp: 0, vd: 0};
-                    const s5 = s[4] || {ap: 0, ad: 0, vp: 0, vd: 0};
-
                     return (
                       <tr className="border-2 border-black font-semibold">
                         <td className="p-1.5 border-2 border-black">1</td>
-                        <td className="p-1.5 border-2 border-black text-left">
+                        <td className="p-1.5 border-2 border-black text-left w-44">
                           {row.docente_nome}
                         </td>
                         
-                        <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s1.ap, s1.vp)}</td>
-                        <td className="p-1.5 border-2 border-black">{renderDadasCell(s1.ad, s1.vd)}</td>
-                        <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s2.ap, s2.vp)}</td>
-                        <td className="p-1.5 border-2 border-black">{renderDadasCell(s2.ad, s2.vd)}</td>
-                        <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s3.ap, s3.vp)}</td>
-                        <td className="p-1.5 border-2 border-black">{renderDadasCell(s3.ad, s3.vd)}</td>
-                        <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s4.ap, s4.vp)}</td>
-                        <td className="p-1.5 border-2 border-black">{renderDadasCell(s4.ad, s4.vd)}</td>
-                        <td className="p-1.5 border-2 border-black">{renderProgramadasCell(s5.ap, s5.vp)}</td>
-                        <td className="p-1.5 border-2 border-black">{renderDadasCell(s5.ad, s5.vd)}</td>
+                        <td className="p-1.5 border-2 border-black">{getWeekProgramadas(row, 0)}</td>
+                        <td className="p-1.5 border-2 border-black">{getWeekDadas(row, 0)}</td>
+                        <td className="p-1.5 border-2 border-black">{getWeekProgramadas(row, 1)}</td>
+                        <td className="p-1.5 border-2 border-black">{getWeekDadas(row, 1)}</td>
+                        <td className="p-1.5 border-2 border-black">{getWeekProgramadas(row, 2)}</td>
+                        <td className="p-1.5 border-2 border-black">{getWeekDadas(row, 2)}</td>
+                        <td className="p-1.5 border-2 border-black">{getWeekProgramadas(row, 3)}</td>
+                        <td className="p-1.5 border-2 border-black">{getWeekDadas(row, 3)}</td>
+                        <td className="p-1.5 border-2 border-black">{getWeekProgramadas(row, 4)}</td>
+                        <td className="p-1.5 border-2 border-black">{getWeekDadas(row, 4)}</td>
 
-                        <td className="p-1.5 border-2 border-black font-semibold">{row.total_ap}</td>
-                        <td className="p-1.5 border-2 border-black font-extrabold">{row.total_ad}</td>
-                        {showVigias && (
-                          <>
-                            <td className="p-1.5 border-2 border-black font-semibold">{row.total_vp || 0}</td>
-                            <td className="p-1.5 border-2 border-black font-extrabold">{row.total_vd || 0}</td>
-                          </>
-                        )}
+                         <td className="p-1.5 border-2 border-black font-semibold">{getDocenteTotalProgramadas(row)}</td>
+                        <td className="p-1.5 border-2 border-black font-extrabold">{getDocenteTotalDadas(row)}</td>
                         
                         <td className="p-1.5 border-2 border-black font-extrabold bg-yellow-100">
-                          {formatarValor(((row.total_ad || 0) + (row.total_vd || 0)) * 500)}
+                          {formatarValor(getDocenteTotalDadas(row) * 500)}
                         </td>
                       </tr>
                     );

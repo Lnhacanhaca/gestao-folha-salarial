@@ -62,6 +62,7 @@ const Dashboard = () => {
     totalDocentes: 0,
     totalCursos: 5,
     totalAdHours: 0,
+    totalVdHours: 0,
     totalValor: 0,
     courseDetails: []
   });
@@ -69,12 +70,29 @@ const Dashboard = () => {
   const [isAvisosModalOpen, setIsAvisosModalOpen] = useState(false);
   const [analytics, setAnalytics] = useState(null);
 
-  const [activeMonth] = useState(() => new Date().getMonth() + 1);
-  const [activeYear] = useState(() => new Date().getFullYear());
+  const [activeMonth, setActiveMonth] = useState(() => {
+    const now = new Date();
+    let m = now.getMonth() + 1;
+    if (now.getDate() <= 15) {
+      m = m - 1;
+      if (m === 0) m = 12;
+    }
+    return m;
+  });
+  const [activeYear, setActiveYear] = useState(() => {
+    const now = new Date();
+    let m = now.getMonth() + 1;
+    let y = now.getFullYear();
+    if (now.getDate() <= 15) {
+      m = m - 1;
+      if (m === 0) y = y - 1;
+    }
+    return y;
+  });
 
   const meses = [
-    "Jan", "Fev", "Mar", "Abr", "Maio", "Jun",
-    "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
 
   const fetchDashboardData = async () => {
@@ -116,12 +134,14 @@ const Dashboard = () => {
       const sheetsResponses = await Promise.all(sheetsPromises);
       
       let totalAd = 0;
+      let totalVd = 0;
       let totalVal = 0;
       
       sheetsResponses.forEach(res => {
         const sheet = res.data || [];
         sheet.forEach(row => {
           totalAd += row.total_ad || 0;
+          totalVd += row.total_vd || 0;
           totalVal += row.valor_receber || 0;
         });
       });
@@ -174,6 +194,7 @@ const Dashboard = () => {
         totalDocentes: filteredDocentes.length,
         totalCursos: managedIds.length,
         totalAdHours: totalAd,
+        totalVdHours: totalVd,
         totalValor: totalVal,
         courseDetails: Object.values(courseStats)
       });
@@ -196,8 +217,13 @@ const Dashboard = () => {
   }));
 
   // Analytics formatting
+  const mesesAbreviados = [
+    "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+    "Jul", "Ago", "Set", "Out", "Nov", "Dez"
+  ];
+
   const analyticsEvolution = analytics?.evolution.map(e => ({
-    name: meses[e.mes - 1],
+    name: mesesAbreviados[e.mes - 1],
     'Aulas Programadas (AP)': e.total_ap,
     'Aulas Dadas (AD)': e.total_ad,
     'Custo (Meticais)': e.custo_total
@@ -267,9 +293,30 @@ const Dashboard = () => {
             Bem-vindo ao dashboard do Curso Nocturno do ISPT para o mês de <span className="text-primary font-bold">{meses[activeMonth - 1]} de {activeYear}</span>.
           </p>
         </div>
-        <div className="flex items-center gap-2 bg-secondary/50 px-4 py-2 rounded-2xl border text-xs font-bold text-muted-foreground select-none shrink-0">
-          <Clock size={14} className="text-primary" />
-          <span>Sincronizado em tempo real</span>
+        
+        {/* Selectors */}
+        <div className="flex flex-wrap items-center gap-3 relative z-10 bg-secondary/30 p-3 rounded-2xl border shrink-0">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-muted-foreground">Mês:</span>
+            <select
+              value={activeMonth}
+              onChange={(e) => setActiveMonth(parseInt(e.target.value))}
+              className="bg-background border rounded-xl px-3 py-1.5 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none cursor-pointer"
+            >
+              {meses.map((m, i) => (
+                <option key={i} value={i + 1}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-bold text-muted-foreground">Ano:</span>
+            <input
+              type="number"
+              value={activeYear}
+              onChange={(e) => setActiveYear(parseInt(e.target.value))}
+              className="bg-background border rounded-xl px-3 py-1.5 text-xs font-bold w-20 text-center focus:ring-2 focus:ring-primary/20 outline-none"
+            />
+          </div>
         </div>
       </div>
 
@@ -304,10 +351,10 @@ const Dashboard = () => {
           colorClass="bg-indigo-50 text-indigo-600 border-indigo-100"
         />
         <StatCard 
-          title="Aulas Dadas (AD)"
-          value={`${stats.totalAdHours}h`}
+          title="Aulas/Vigias Dadas (AD/VD)"
+          value={`${stats.totalAdHours + stats.totalVdHours}h`}
           icon={Clock}
-          description="Total ministrado no mês atual"
+          description={`Aulas: ${stats.totalAdHours}h | Vigias: ${stats.totalVdHours}h`}
           colorClass="bg-cyan-50 text-cyan-600 border-cyan-100"
         />
         <StatCard 
