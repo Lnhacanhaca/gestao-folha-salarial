@@ -104,7 +104,12 @@ const remove = async (req, res, next) => {
     const { id } = req.params;
     const oldDocente = await db('docentes').where({ id }).first();
     
-    await db('docentes').where({ id }).del();
+    await db.transaction(async (trx) => {
+      // First delete dependent folhas (which automatically cascade delete folha_detalhes)
+      await trx('folhas').where({ docente_id: id }).del();
+      // Then delete the docente
+      await trx('docentes').where({ id }).del();
+    });
 
     await logAction({
       userId: req.user.id,
@@ -123,7 +128,12 @@ const remove = async (req, res, next) => {
 
 const removeAll = async (req, res, next) => {
   try {
-    await db('docentes').del();
+    await db.transaction(async (trx) => {
+      // First delete all sheets (which cascade delete folha_detalhes)
+      await trx('folhas').del();
+      // Then delete all docentes
+      await trx('docentes').del();
+    });
 
     await logAction({
       userId: req.user.id,
