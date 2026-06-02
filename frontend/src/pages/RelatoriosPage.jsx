@@ -81,7 +81,7 @@ const RelatoriosPage = () => {
     return y;
   });
   const [cursoId, setCursoId] = useState(() => {
-    if (user && user.role !== 'ADMIN') return dbCursoIdToReportId(user.curso_id);
+    if (user && user.role !== 'ADMIN') return dbCursoIdToReportId(user);
     return 1;
   });
   const [dados, setDados] = useState([]);
@@ -159,7 +159,27 @@ const RelatoriosPage = () => {
         endpoint = `/folhas/geral?mes=${mes}&ano=${ano}`;
       }
       const { data } = await api.get(endpoint);
-      setDados(data);
+      
+      const getIsExamWeekFresh = (wIdx) => {
+        if (!showVigias) return false;
+        return data.some(row => {
+          const s = row.semanas?.[wIdx];
+          return (s?.vp > 0 || s?.vd > 0);
+        });
+      };
+      
+      const getDocenteTotalDadasFresh = (row) => {
+        let tot = 0;
+        for (let i = 0; i < 5; i++) {
+          const s = row.semanas?.[i];
+          const isExam = getIsExamWeekFresh(i);
+          tot += isExam ? (s?.vd || 0) : (s?.ad || 0);
+        }
+        return tot;
+      };
+      
+      const filtered = data.filter(row => getDocenteTotalDadasFresh(row) > 0);
+      setDados(filtered);
     } catch (err) {
       console.error(err);
     } finally {
@@ -173,7 +193,7 @@ const RelatoriosPage = () => {
 
   useEffect(() => {
     if (user && user.role !== 'ADMIN') {
-      setCursoId(dbCursoIdToReportId(user.curso_id));
+      setCursoId(dbCursoIdToReportId(user));
     }
   }, [user]);
 
@@ -187,28 +207,9 @@ const RelatoriosPage = () => {
     <div className="space-y-6">
       <style>
         {`
-          @media screen {
-            /* Force the main layout background to be pure white and remove shadow/borders */
-            body,
-            html,
-            div.min-h-screen,
-            div.flex.flex-1,
-            div.flex-1.flex.flex-col,
-            main {
-              background-color: white !important;
-              background: white !important;
-            }
-            /* Remove borders/shadows from layout header, breadcrumb and sidebar */
-            header,
-            aside,
-            div.border-b {
-              box-shadow: none !important;
-              border-color: transparent !important;
-            }
-          }
           @media print {
             @page {
-              size: ${viewMode === 'oficio' ? 'A4 portrait' : 'A4 landscape'};
+              size: ${(viewMode === 'oficio' || viewMode === 'falha') ? 'A4 portrait' : 'A4 landscape'};
               margin: 0;
             }
             /* Reset layout elements for print to avoid flexbox pagination/clipping bugs */
@@ -398,27 +399,27 @@ const RelatoriosPage = () => {
 
       {/* Ofício - Print Ready (Only for Geral) */}
       {cursoId === 1 && !loading && viewMode === 'oficio' && (
-        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[1000px] flex flex-col justify-between print:p-0 print:border-0 print:shadow-none w-full max-w-[850px] mx-auto print:max-w-none overflow-x-auto">
+        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[800px] print:p-0 print:border-0 print:shadow-none w-full max-w-[850px] mx-auto print:max-w-none overflow-x-auto">
           <div className="min-w-[800px] print:min-w-0">
-            <div className="text-center mb-8">
-              <img src="/emblema.png" alt="República de Moçambique" className="h-24 mx-auto mb-2 object-contain" />
-              <h2 className="font-bold uppercase text-xs sm:text-sm tracking-wider">República de Moçambique</h2>
-              <div className="my-6">
-                <h2 className="text-sm sm:text-base font-bold uppercase tracking-wide">Instituto Superior Politécnico de Tete</h2>
-                <h3 className="font-bold uppercase text-xs sm:text-sm">(ISPT)</h3>
+            <div className="text-center mb-6" style={{ fontSize: '12pt' }}>
+              <img src="/emblema.png" alt="República de Moçambique" className="h-20 mx-auto mb-2 object-contain" />
+              <h2 className="font-bold uppercase tracking-wider" style={{ fontSize: '12pt' }}>República de Moçambique</h2>
+              <div className="my-4">
+                <h2 className="font-bold uppercase tracking-wide" style={{ fontSize: '12pt' }}>Instituto Superior Politécnico de Tete</h2>
+                <h3 className="font-bold uppercase" style={{ fontSize: '12pt' }}>(ISPT)</h3>
               </div>
             </div>
 
-            <div className="mt-16 space-y-12 px-4 sm:px-8 max-w-4xl mx-auto text-justify text-sm">
+            <div className="mt-8 space-y-6 px-4 sm:px-8 max-w-4xl mx-auto text-justify" style={{ fontSize: '12pt' }}>
               <p className="font-bold">
-                Para: Director Geral Adjunto por Área de Administração e Finanças
+                Para: Director Geral Adjunto para Área de Administração e Finanças
               </p>
 
-              <p>
+              <p className="mt-2">
                 <span className="font-bold">Assunto:</span> <span className="underline">Pagamento de Salário referente ao mês de {meses[mes-1]} de {ano}</span>
               </p>
 
-              <div className="space-y-6 leading-relaxed">
+              <div className="space-y-4 leading-relaxed mt-4">
                 <p>
                   1. Em anexo, se envia o mapa referente a aulas programadas e dadas pelos docentes e os respectivos valores a serem remunerados.
                 </p>
@@ -429,26 +430,28 @@ const RelatoriosPage = () => {
                   3. À consideração Superior.
                 </p>
               </div>
-            </div>
-          </div>
 
-          <div className="mt-20 text-center space-y-10 px-4 sm:px-8 max-w-4xl mx-auto w-full print-no-break">
-            <p className="text-sm">Tete, {new Date().getDate()} de {meses[new Date().getMonth()]} de {new Date().getFullYear()}</p>
-            <p className="font-bold uppercase tracking-wider text-xs">Os Directores de Curso</p>
+              {/* Signatures block moved right after point 3 */}
+              <div className="mt-6 text-center space-y-6 w-full print-no-break" style={{ fontSize: '12pt' }}>
+                <p>Tete, {new Date().getDate()} de {meses[new Date().getMonth()]} de {new Date().getFullYear()}</p>
+                <p className="font-bold uppercase tracking-wider" style={{ fontSize: '12pt' }}>Os Directores de Curso</p>
 
-            <div className="flex flex-col sm:flex-row justify-around items-center gap-8 mt-12 w-full">
-              <div className="space-y-2">
-                <div className="border-b border-black w-52"></div>
-                <p className="text-xs font-semibold">/MSc. Lucas Jordão Simoco/</p>
+                <div className="flex flex-col sm:flex-row justify-around items-center gap-8 mt-6 w-full">
+                  <div className="space-y-2">
+                    <div className="border-b border-black w-52 mx-auto"></div>
+                    <p className="font-semibold" style={{ fontSize: '12pt' }}>/MSc. Lucas Jordão Simoco/</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="border-b border-black w-52 mx-auto"></div>
+                    <p className="font-semibold" style={{ fontSize: '12pt' }}>/MSc. Almeida Albuquerque/</p>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="border-b border-black w-52 mx-auto"></div>
+                    <p className="font-semibold" style={{ fontSize: '12pt' }}>/MSc. Luís Jorge Nhacanhaca/</p>
+                  </div>
+                </div>
               </div>
-              <div className="space-y-2">
-                <div className="border-b border-black w-52"></div>
-                <p className="text-xs font-semibold">/MSc. Almeida Albuquerque/</p>
-              </div>
-              <div className="space-y-2">
-                <div className="border-b border-black w-52"></div>
-                <p className="text-xs font-semibold">/MSc. Luís Jorge Nhacanhaca/</p>
-              </div>
+
             </div>
           </div>
         </div>
@@ -487,7 +490,8 @@ const RelatoriosPage = () => {
                       <th rowSpan={3} className="p-1.5 border-2 border-black w-44 text-left">Docentes</th>
                       <th colSpan={10} className="p-1.5 border-2 border-black">Aulas / Vigias Mensais</th>
                       <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Totais</th>
-                      <th colSpan={1} rowSpan={3} className="p-1.5 border-2 border-black w-24">Valor a Receber</th>
+                      <th colSpan={1} rowSpan={3} className="p-1.5 border-2 border-black w-24">Total Programado (Mt)</th>
+                      <th colSpan={1} rowSpan={3} className="p-1.5 border-2 border-black w-24">Total a Receber (Mt)</th>
                     </tr>
                     <tr className="bg-gray-200 border-2 border-black">
                       <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
@@ -554,6 +558,9 @@ const RelatoriosPage = () => {
                            <td className="p-1.5 border-2 border-black font-semibold">{getDocenteTotalProgramadas(row)}</td>
                           <td className="p-1.5 border-2 border-black font-extrabold">{getDocenteTotalDadas(row)}</td>
                           
+                          <td className="p-1.5 border-2 border-black font-medium">
+                            {formatarValor(getDocenteTotalProgramadas(row) * 500)}
+                          </td>
                           <td className="p-1.5 border-2 border-black font-extrabold">
                             {formatarValor(getDocenteTotalDadas(row) * 500)}
                           </td>
@@ -598,6 +605,9 @@ const RelatoriosPage = () => {
                        <td className="p-1.5 border-2 border-black">{dados.reduce((acc, row) => acc + getDocenteTotalProgramadas(row), 0)}</td>
                       <td className="p-1.5 border-2 border-black">{dados.reduce((acc, row) => acc + getDocenteTotalDadas(row), 0)}</td>
                       
+                      <td className="p-1.5 border-2 border-black text-[11px] font-bold text-black">
+                        {formatarValor(dados.reduce((acc, row) => acc + getDocenteTotalProgramadas(row), 0) * 500)}
+                      </td>
                       <td className="p-1.5 border-2 border-black bg-yellow-100 text-[11px] font-black text-black">
                         {formatarValor(totalGeralDadas * 500)}
                       </td>
@@ -742,7 +752,7 @@ const RelatoriosPage = () => {
 
       {/* Falha Print Template */}
       {viewMode === 'falha' && dados[falhaDocenteIdx] && (
-        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[1000px] flex flex-col print:p-0 print:border-0 print:shadow-none w-full max-w-[1100px] mx-auto print:max-w-none relative">
+        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[1000px] flex flex-col print:p-0 print:border-0 print:shadow-none w-full max-w-[850px] mx-auto print:max-w-none relative text-xs sm:text-sm" style={{ fontSize: '12pt' }}>
           <div className="text-center mb-8">
             <img src="/emblema.png" alt="República de Moçambique" className="h-24 mx-auto mb-2 object-contain" />
             <h2 className="font-bold uppercase text-sm tracking-wider">República de Moçambique</h2>
@@ -768,14 +778,15 @@ const RelatoriosPage = () => {
             <p className="mb-4 font-bold">Resumo das Horas Lançadas e Valor a Pagar:</p>
             
             <div className="overflow-x-auto w-full scrollbar-thin print:border-none print:overflow-visible print:w-full border-2 border-black">
-              <table className="w-full border-collapse text-[10px] text-center min-w-[950px] print:min-w-0">
+              <table className="w-full border-collapse text-[9px] text-center print:min-w-0">
                 <thead>
                   <tr className="bg-gray-200 border-2 border-black">
                     <th rowSpan={3} className="p-1.5 border-2 border-black w-8">Nº</th>
                     <th rowSpan={3} className="p-1.5 border-2 border-black w-44 text-left">Docentes</th>
                     <th colSpan={10} className="p-1.5 border-2 border-black">Aulas / Vigias Mensais</th>
                     <th colSpan={2} rowSpan={2} className="p-1.5 border-2 border-black">Totais</th>
-                    <th colSpan={1} rowSpan={3} className="p-1.5 border-2 border-black w-24">Valor a Receber</th>
+                    <th colSpan={1} rowSpan={3} className="p-1.5 border-2 border-black w-24">Total Programado (Mt)</th>
+                    <th colSpan={1} rowSpan={3} className="p-1.5 border-2 border-black w-24">Total a Receber (Mt)</th>
                   </tr>
                   <tr className="bg-gray-200 border-2 border-black">
                     <th colSpan={2} className="p-1 border-2 border-black text-[9px]">
@@ -838,6 +849,9 @@ const RelatoriosPage = () => {
                          <td className="p-1.5 border-2 border-black font-semibold">{getDocenteTotalProgramadas(row)}</td>
                         <td className="p-1.5 border-2 border-black font-extrabold">{getDocenteTotalDadas(row)}</td>
                         
+                        <td className="p-1.5 border-2 border-black font-medium">
+                          {formatarValor(getDocenteTotalProgramadas(row) * 500)}
+                        </td>
                         <td className="p-1.5 border-2 border-black font-extrabold bg-yellow-100">
                           {formatarValor(getDocenteTotalDadas(row) * 500)}
                         </td>

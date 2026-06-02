@@ -12,7 +12,9 @@ import {
   User,
   ShieldAlert,
   ChevronRight,
-  Settings
+  Settings,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { clsx } from 'clsx';
@@ -31,7 +33,7 @@ const SidebarItem = ({ to, icon: Icon, label, active, onClick }) => (
       "flex items-center gap-4 px-6 py-4 transition-all duration-200 border-l-4",
       active 
         ? "bg-primary/5 text-primary border-primary font-bold shadow-sm" 
-        : "text-slate-500 border-transparent hover:text-primary hover:bg-slate-50"
+        : "text-muted-foreground border-transparent hover:text-primary hover:bg-secondary/50 dark:hover:bg-secondary/20"
     )}
   >
     <Icon size={18} />
@@ -45,6 +47,18 @@ const MainLayout = () => {
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
+  const [themeMode, setThemeMode] = React.useState(() => localStorage.getItem('themeMode') || 'light');
+
+  const toggleTheme = () => {
+    const nextMode = themeMode === 'light' ? 'dark' : 'light';
+    setThemeMode(nextMode);
+    localStorage.setItem('themeMode', nextMode);
+    if (nextMode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
 
   const menuItems = [
     { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -81,7 +95,7 @@ const MainLayout = () => {
   const userRoleText = user?.role === 'ADMIN' ? 'Administrador Geral' : 'Director de Curso';
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] flex flex-col">
+    <div className="min-h-screen bg-background text-foreground flex flex-col transition-colors duration-200">
       {/* Top Bar */}
       <header className="h-16 bg-primary flex items-center justify-between px-6 shadow-md z-30 sticky top-0 no-print">
         <div className="flex items-center gap-8">
@@ -99,6 +113,15 @@ const MainLayout = () => {
         </div>
 
         <div className="flex items-center gap-5">
+           {/* Theme Toggle Button */}
+           <button
+              onClick={toggleTheme}
+              className="w-9 h-9 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center text-white transition-all cursor-pointer shadow-sm hover:scale-105 active:scale-95 shrink-0"
+              title={themeMode === 'light' ? "Ativar Modo Escuro" : "Ativar Modo Claro"}
+            >
+              {themeMode === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+           </button>
+
            <div className="flex items-center gap-3 pl-4 border-l border-white/10">
               <div className="text-right hidden sm:block">
                 <p className="text-white text-sm font-semibold">{user?.username || 'Utilizador'}</p>
@@ -117,7 +140,7 @@ const MainLayout = () => {
 
       <div className="flex flex-1">
         {/* Sidebar Desktop */}
-        <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-100 z-20 no-print sticky top-16 h-[calc(100vh-64px)] justify-between">
+        <aside className="hidden lg:flex flex-col w-64 bg-card border-r border-border z-20 no-print sticky top-16 h-[calc(100vh-64px)] justify-between">
           <nav className="flex-1 flex flex-col pt-4">
             {menuItems.map((item) => (
               <SidebarItem 
@@ -154,9 +177,9 @@ const MainLayout = () => {
         {/* Main Content Area */}
         <div className="flex-1 flex flex-col">
            {/* Breadcrumb Header */}
-            <div className="bg-white px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between border-b border-slate-100 no-print">
+            <div className="bg-card px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between border-b border-border no-print">
                <div>
-                  <h2 className="text-xl font-bold text-slate-800">{getBreadcrumbTitle()}</h2>
+                  <h2 className="text-xl font-bold text-foreground">{getBreadcrumbTitle()}</h2>
                   <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5 font-medium">
                      <Link to="/" className="hover:text-primary transition-colors">Início</Link>
                      <ChevronRight size={12} className="text-slate-300" />
@@ -174,7 +197,7 @@ const MainLayout = () => {
       {/* Mobile Menu Overlay */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
-          <div className="w-64 h-full bg-white flex flex-col justify-between" onClick={e => e.stopPropagation()}>
+          <div className="w-64 h-full bg-card border-r border-border flex flex-col justify-between" onClick={e => e.stopPropagation()}>
              <div>
                <div className="h-16 bg-primary flex items-center justify-between px-6 border-b border-white/10">
                   <div className="flex items-center gap-2">

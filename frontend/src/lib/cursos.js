@@ -42,7 +42,17 @@ export const CURSO_NOME = {
  * that this user manages. ADMIN (or null) returns all.
  */
 export function getManagedCourseIds(user) {
-  if (!user || user.role === 'ADMIN') return [2, 3, 4, 5, 6];
+  if (!user) return [];
+  if (user.role === 'ADMIN') return [2, 3, 4, 5, 6];
+  
+  const username = user.username ? user.username.toLowerCase() : '';
+  if (username === 'almeida') {
+    return [2, 3];
+  }
+  if (username === 'lucas' || username === 'leandro') {
+    return [4, 5];
+  }
+
   const cid = parseInt(user.curso_id);
   if (cid === 2 || cid === 3) return [2, 3];
   if (cid === 4 || cid === 5) return [4, 5];
@@ -51,15 +61,26 @@ export function getManagedCourseIds(user) {
 }
 
 /**
- * Map a user's DB curso_id to the report combined ID used in
+ * Map a user or DB curso_id to the report combined ID used in
  * the RelatoriosPage selectors & the backend's `combined=true` parameter.
  *
  *   DB 2 or 3 → report 2  (CA + CAP)
  *   DB 4 or 5 → report 3  (Minas + EPM)
  *   DB 6      → report 4  (Informática)
  */
-export function dbCursoIdToReportId(dbCursoId) {
-  const cid = parseInt(dbCursoId);
+export function dbCursoIdToReportId(userOrId) {
+  if (!userOrId) return 1;
+  
+  let cid;
+  if (typeof userOrId === 'object') {
+    const username = userOrId.username ? userOrId.username.toLowerCase() : '';
+    if (username === 'almeida') return 2;
+    if (username === 'lucas' || username === 'leandro') return 3;
+    cid = parseInt(userOrId.curso_id);
+  } else {
+    cid = parseInt(userOrId);
+  }
+
   if (cid === 2 || cid === 3) return 2;
   if (cid === 4 || cid === 5) return 3;
   if (cid === 6) return 4;

@@ -70,6 +70,7 @@ const formatarFaltas = (horasFalta) => {
 
 const LancarNotasPage = () => {
   const { user } = useAuth();
+  const managedIds = getManagedCourseIds(user);
   const [mes, setMes] = useState(() => {
     const saved = localStorage.getItem('sgfs_mes');
     if (saved) return parseInt(saved);
@@ -124,7 +125,6 @@ const LancarNotasPage = () => {
 
   useEffect(() => {
     if (user) {
-      const managedIds = getManagedCourseIds(user);
       const activeCursoId = user.role !== 'ADMIN' ? managedIds[0] : (parseInt(localStorage.getItem('sgfs_cursoId')) || managedIds[0] || 2);
       setCursoId(activeCursoId);
       fetchFolha(mes, ano, activeCursoId);
@@ -446,8 +446,8 @@ const LancarNotasPage = () => {
                 const savedSemana = saved.semanas?.[sIdx];
                 return {
                   semana: sIdx + 1,
-                  // Load the saved AP if it exists, otherwise use profile's AP
-                  ap: savedSemana && savedSemana.ap !== undefined ? parseFloat(savedSemana.ap) : defSemana.ap,
+                  // Always use the docente's current profile AP
+                  ap: defSemana.ap,
                   ad: savedSemana ? (parseFloat(savedSemana.ad) || 0) : 0,
                   vp: savedSemana ? (parseFloat(savedSemana.vp) || 0) : 0,
                   vd: savedSemana ? (parseFloat(savedSemana.vd) || 0) : 0
@@ -626,11 +626,10 @@ const LancarNotasPage = () => {
           <select 
             value={cursoId} 
             onChange={(e) => handleFilterChange('cursoId', e.target.value)}
-            disabled={user?.role !== 'ADMIN'}
+            disabled={user?.role !== 'ADMIN' && managedIds.length <= 1}
             className="w-full bg-background border rounded-xl p-2.5 outline-none focus:ring-2 focus:ring-primary/20 disabled:bg-muted"
           >
             {(() => {
-              const managedIds = getManagedCourseIds(user);
               if (user?.role === 'ADMIN') {
                 return LANCAR_COURSE_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>

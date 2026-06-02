@@ -118,64 +118,71 @@ const importar = async (req, res, next) => {
         })
         .first();
 
-      if (folha) {
-        await trx('folhas').where({ id: folha.id }).update({
-          total_ap,
-          total_ad,
-          total_vp,
-          total_vd,
-          valor_receber,
-          retificada: item.retificada ? 1 : 0,
-          observacoes: item.observacoes || null,
-          updated_at: new Date()
-        });
-        // Clear details to re‑insert
-        await trx('folha_detalhes').where({ folha_id: folha.id }).del();
-      } else {
-        if (isPostgres) {
-          const [inserted] = await trx('folhas').insert({
-            docente_id: docente.id,
-            curso_id: parseInt(curso_id),
-            mes: parseInt(mes),
-            ano: parseInt(ano),
-            total_ap,
-            total_ad,
-            total_vp,
-            total_vd,
-            valor_receber,
-            retificada: item.retificada ? 1 : 0,
-            observacoes: item.observacoes || null
-          }).returning('*');
-          folha = inserted;
-        } else {
-          const [insertedFolhaId] = await trx('folhas').insert({
-            docente_id: docente.id,
-            curso_id: parseInt(curso_id),
-            mes: parseInt(mes),
-            ano: parseInt(ano),
-            total_ap,
-            total_ad,
-            total_vp,
-            total_vd,
-            valor_receber,
-            retificada: item.retificada ? 1 : 0,
-            observacoes: item.observacoes || null
-          });
-          folha = await trx('folhas').where({ id: insertedFolhaId }).first();
+      if (total_ad === 0 && total_vd === 0) {
+        if (folha) {
+          await trx('folha_detalhes').where({ folha_id: folha.id }).del();
+          await trx('folhas').where({ id: folha.id }).del();
         }
+      } else {
+        if (folha) {
+          await trx('folhas').where({ id: folha.id }).update({
+            total_ap,
+            total_ad,
+            total_vp,
+            total_vd,
+            valor_receber,
+            retificada: item.retificada ? 1 : 0,
+            observacoes: item.observacoes || null,
+            updated_at: new Date()
+          });
+          // Clear details to re‑insert
+          await trx('folha_detalhes').where({ folha_id: folha.id }).del();
+        } else {
+          if (isPostgres) {
+            const [inserted] = await trx('folhas').insert({
+              docente_id: docente.id,
+              curso_id: parseInt(curso_id),
+              mes: parseInt(mes),
+              ano: parseInt(ano),
+              total_ap,
+              total_ad,
+              total_vp,
+              total_vd,
+              valor_receber,
+              retificada: item.retificada ? 1 : 0,
+              observacoes: item.observacoes || null
+            }).returning('*');
+            folha = inserted;
+          } else {
+            const [insertedFolhaId] = await trx('folhas').insert({
+              docente_id: docente.id,
+              curso_id: parseInt(curso_id),
+              mes: parseInt(mes),
+              ano: parseInt(ano),
+              total_ap,
+              total_ad,
+              total_vp,
+              total_vd,
+              valor_receber,
+              retificada: item.retificada ? 1 : 0,
+              observacoes: item.observacoes || null
+            });
+            folha = await trx('folhas').where({ id: insertedFolhaId }).first();
+          }
+        }
+
+        // Build detalhes safely – ensure semanas is an array
+        const detalhes = semanas.map(s => ({
+          folha_id: folha.id,
+          semana: s.semana,
+          ap: s.ap,
+          ad: s.ad,
+          vp: s.vp || 0,
+          vd: s.vd || 0
+        }));
+
+        await trx('folha_detalhes').insert(detalhes);
       }
-
-      // Build detalhes safely – ensure semanas is an array
-      const detalhes = semanas.map(s => ({
-        folha_id: folha.id,
-        semana: s.semana,
-        ap: s.ap,
-        ad: s.ad,
-        vp: s.vp || 0,
-        vd: s.vd || 0
-      }));
-
-      await trx('folha_detalhes').insert(detalhes);
     }
 
     await trx.commit();
@@ -287,6 +294,20 @@ const getByCurso = async (req, res, next) => {
       ]));
 
       queryActiveCursos.forEach(cid => {
+        let match = cursosArray.find(c => {
+          const curId = Number(c.id || c);
+          const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+          return curId === cid && curSem === activeSemestre;
+        });
+        if (!match) {
+          match = cursosArray.find(c => {
+            const curId = Number(c.id || c);
+            const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+            return curId === cid && curSem === null;
+          });
+        }
+        const defaultAp = match ? (parseFloat(match.ap) || 0) : 0;
+
         const f = teacherFolhas.find(fol => fol.curso_id === cid);
         if (f) {
           retificada = retificada || f.retificada || 0;
@@ -297,46 +318,18 @@ const getByCurso = async (req, res, next) => {
             f_detalhes.forEach(d => {
               const idx = d.semana - 1;
               if (idx >= 0 && idx < 5) {
-                semanas[idx].ap += parseFloat(d.ap) || 0;
+                semanas[idx].ap += defaultAp;
                 semanas[idx].ad += parseFloat(d.ad) || 0;
                 semanas[idx].vp += parseFloat(d.vp) || 0;
                 semanas[idx].vd += parseFloat(d.vd) || 0;
               }
             });
           } else {
-            // Sheet has no details, fall back to profile default AP
-            let match = cursosArray.find(c => {
-              const curId = Number(c.id || c);
-              const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
-              return curId === cid && curSem === activeSemestre;
-            });
-            if (!match) {
-              match = cursosArray.find(c => {
-                const curId = Number(c.id || c);
-                const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
-                return curId === cid && curSem === null;
-              });
-            }
-            const defaultAp = match ? (parseFloat(match.ap) || 0) : 0;
             for (let i = 0; i < 5; i++) {
               semanas[i].ap += defaultAp;
             }
           }
         } else {
-          // No saved sheet, use profile default AP
-          let match = cursosArray.find(c => {
-            const curId = Number(c.id || c);
-            const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
-            return curId === cid && curSem === activeSemestre;
-          });
-          if (!match) {
-            match = cursosArray.find(c => {
-              const curId = Number(c.id || c);
-              const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
-              return curId === cid && curSem === null;
-            });
-          }
-          const defaultAp = match ? (parseFloat(match.ap) || 0) : 0;
           for (let i = 0; i < 5; i++) {
             semanas[i].ap += defaultAp;
           }
@@ -431,6 +424,20 @@ const getGeral = async (req, res, next) => {
       ]));
 
       queryActiveCursos.forEach(cid => {
+        let match = cursosArray.find(c => {
+          const curId = Number(c.id || c);
+          const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+          return curId === cid && curSem === activeSemestre;
+        });
+        if (!match) {
+          match = cursosArray.find(c => {
+            const curId = Number(c.id || c);
+            const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
+            return curId === cid && curSem === null;
+          });
+        }
+        const defaultAp = match ? (parseFloat(match.ap) || 0) : 0;
+
         const f = teacherFolhas.find(fol => fol.curso_id === cid);
         if (f) {
           retificada = retificada || f.retificada || 0;
@@ -441,46 +448,18 @@ const getGeral = async (req, res, next) => {
             f_detalhes.forEach(d => {
               const idx = d.semana - 1;
               if (idx >= 0 && idx < 5) {
-                semanas[idx].ap += parseFloat(d.ap) || 0;
+                semanas[idx].ap += defaultAp;
                 semanas[idx].ad += parseFloat(d.ad) || 0;
                 semanas[idx].vp += parseFloat(d.vp) || 0;
                 semanas[idx].vd += parseFloat(d.vd) || 0;
               }
             });
           } else {
-            // Sheet has no details, fall back to profile default AP
-            let match = cursosArray.find(c => {
-              const curId = Number(c.id || c);
-              const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
-              return curId === cid && curSem === activeSemestre;
-            });
-            if (!match) {
-              match = cursosArray.find(c => {
-                const curId = Number(c.id || c);
-                const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
-                return curId === cid && curSem === null;
-              });
-            }
-            const defaultAp = match ? (parseFloat(match.ap) || 0) : 0;
             for (let i = 0; i < 5; i++) {
               semanas[i].ap += defaultAp;
             }
           }
         } else {
-          // No saved sheet, use profile default AP
-          let match = cursosArray.find(c => {
-            const curId = Number(c.id || c);
-            const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
-            return curId === cid && curSem === activeSemestre;
-          });
-          if (!match) {
-            match = cursosArray.find(c => {
-              const curId = Number(c.id || c);
-              const curSem = c.semestre !== undefined ? Number(c.semestre) : null;
-              return curId === cid && curSem === null;
-            });
-          }
-          const defaultAp = match ? (parseFloat(match.ap) || 0) : 0;
           for (let i = 0; i < 5; i++) {
             semanas[i].ap += defaultAp;
           }
