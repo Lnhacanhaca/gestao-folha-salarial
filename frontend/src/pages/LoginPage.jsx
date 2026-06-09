@@ -64,21 +64,6 @@ const LoginPage = () => {
             </div>
           </div>
 
-          {/* Testimonial/Info Box at the bottom */}
-          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/15 z-10 space-y-4">
-            <p className="text-xs leading-relaxed text-white/95 font-medium italic">
-              "Otimizando a administração académica do ISPT com fiabilidade, transparência e segurança nos lançamentos mensais."
-            </p>
-            <div className="flex items-center gap-3 pt-2">
-              <div className="w-9 h-9 bg-white/20 rounded-full flex items-center justify-center text-xs font-black border border-white/20">
-                ISPT
-              </div>
-              <div>
-                <p className="text-xs font-black">Instituto Superior Politécnico de Tete</p>
-                <p className="text-[10px] text-white/60 font-bold uppercase tracking-wider">Tete, Moçambique</p>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right Column - Login Form */}
@@ -97,7 +82,7 @@ const LoginPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-5 p-6 bg-slate-50/60 dark:bg-slate-900/40 rounded-3xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-600 dark:text-slate-400">Nome de Utilizador</label>
                 <div className="relative">
@@ -106,7 +91,7 @@ const LoginPage = () => {
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-secondary/30 border border-transparent rounded-xl py-3.5 pl-10 pr-4 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder-slate-400"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-3.5 pl-10 pr-4 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder-slate-400"
                     placeholder="Introduza o seu nome de utilizador"
                     required
                   />
@@ -126,7 +111,7 @@ const LoginPage = () => {
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-secondary/30 border border-transparent rounded-xl py-3.5 pl-10 pr-4 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder-slate-400"
+                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-3.5 pl-10 pr-4 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder-slate-400"
                     placeholder="••••••••"
                     required
                   />
