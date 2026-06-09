@@ -378,10 +378,10 @@ const DocentesPage = () => {
           <p className="text-muted-foreground">Gestão unificada de professores do Curso Nocturno</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+        <div className="flex flex-row flex-wrap items-center gap-2.5 w-full md:w-auto mt-4 md:mt-0">
           {isAdmin && (
-            <label className={`w-full sm:w-auto justify-center bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg cursor-pointer transition-all flex items-center gap-2 font-bold shadow-sm ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
-              {importing ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
+            <label className={`w-[calc(50%-5px)] sm:w-auto justify-center bg-secondary hover:bg-secondary/80 text-foreground px-4 py-3 sm:py-2.5 rounded-xl cursor-pointer transition-all flex items-center gap-2 font-bold shadow-sm text-xs sm:text-sm ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
+              {importing ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
               Importar CSV
               <input type="file" accept=".csv" onChange={handleCSVImport} className="hidden" disabled={importing} />
             </label>
@@ -389,18 +389,18 @@ const DocentesPage = () => {
 
           <button 
             onClick={handleCSVExport}
-            className="w-full sm:w-auto justify-center bg-secondary hover:bg-secondary/80 text-foreground px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-sm"
+            className={`${isAdmin ? 'w-[calc(50%-5px)]' : 'w-full'} sm:w-auto justify-center bg-secondary hover:bg-secondary/80 text-foreground px-4 py-3 sm:py-2.5 rounded-xl transition-all flex items-center gap-2 font-bold shadow-sm text-xs sm:text-sm`}
           >
-            <Download size={20} />
+            <Download size={18} />
             Exportar CSV
           </button>
 
           {isAdmin && (
             <button 
               onClick={() => openModal()}
-              className="w-full sm:w-auto justify-center bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20"
+              className="w-[calc(50%-5px)] sm:w-auto justify-center bg-primary hover:bg-primary/90 text-white px-4 py-3 sm:py-2.5 rounded-xl transition-all flex items-center gap-2 font-bold shadow-lg shadow-primary/20 text-xs sm:text-sm"
             >
-              <UserPlus size={20} />
+              <UserPlus size={18} />
               Novo Docente
             </button>
           )}
@@ -408,9 +408,9 @@ const DocentesPage = () => {
           {isAdmin && docentes && docentes.length > 0 && (
             <button 
               onClick={handleClearAll}
-              className="w-full sm:w-auto justify-center bg-destructive hover:bg-destructive/90 text-white px-6 py-2 rounded-lg transition-all flex items-center gap-2 font-bold shadow-lg shadow-destructive/20"
+              className="w-[calc(50%-5px)] sm:w-auto justify-center bg-destructive hover:bg-destructive/90 text-white px-4 py-3 sm:py-2.5 rounded-xl transition-all flex items-center gap-2 font-bold shadow-lg shadow-destructive/20 text-xs sm:text-sm"
             >
-              <Trash2 size={20} />
+              <Trash2 size={18} />
               Eliminar Tudo
             </button>
           )}
@@ -501,7 +501,78 @@ const DocentesPage = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile List View */}
+        <div className="md:hidden divide-y divide-border">
+          {isLoading ? (
+            <div className="p-12 text-center flex flex-col items-center justify-center gap-2">
+              <Loader2 className="animate-spin text-primary" size={24} />
+              <span className="text-xs text-muted-foreground font-semibold">Carregando docentes...</span>
+            </div>
+          ) : filteredDocentes?.length === 0 ? (
+            <div className="p-12 text-center text-muted-foreground text-xs font-medium">
+              Nenhum docente encontrado.
+            </div>
+          ) : (
+            filteredDocentes?.map((d) => {
+              const cursosArray = parseCursos(d.cursos);
+              return (
+                <div key={d.id} className="p-5 space-y-4 hover:bg-muted/10 transition-colors">
+                  <div className="flex justify-between items-start gap-4">
+                    <div className="space-y-1">
+                      <h3 className="font-bold text-slate-800 dark:text-white text-sm leading-tight">{d.nome}</h3>
+                      <span className="inline-block px-2 py-0.5 bg-secondary text-muted-foreground text-[10px] font-bold rounded-md">
+                        {d.categoria || 'Sem Categoria'}
+                      </span>
+                    </div>
+
+                    {isAdmin ? (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button 
+                          onClick={() => openModal(d)}
+                          className="p-2 bg-primary/5 hover:bg-primary/10 text-primary rounded-xl transition-all active:scale-95 border border-primary/10"
+                          title="Editar Docente"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(d.id)}
+                          className="p-2 bg-destructive/5 hover:bg-destructive/10 text-destructive rounded-xl transition-all active:scale-95 border border-destructive/10"
+                          title="Remover Docente"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-[9px] uppercase font-black text-muted-foreground bg-secondary/80 px-2 py-0.5 rounded">
+                        Leitura
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <span className="text-[9px] font-black text-muted-foreground uppercase tracking-wider block">Cursos Lecionados</span>
+                    <div className="flex flex-wrap gap-1">
+                      {cursosArray.map(cData => {
+                        const c = CURSOS_OPCOES.find(opt => opt.id === cData.id);
+                        return c ? (
+                          <span key={cData.id} className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded-md" title={`Horas Programadas (AP): ${cData.ap || 0} - Semestre: ${cData.semestre || 1}`}>
+                            {c.nome} {cData.ap > 0 && `(${cData.ap}h)`} <span className="text-muted-foreground font-normal">({cData.semestre || 1}º Sem)</span>
+                          </span>
+                        ) : null;
+                      })}
+                      {cursosArray.length === 0 && (
+                        <span className="text-[10px] text-muted-foreground italic">Nenhum curso associado</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left min-w-[750px]">
             <thead>
               <tr className="bg-muted/50 border-b text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -618,7 +689,7 @@ const DocentesPage = () => {
                         
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {/* 1º Semestre */}
-                          <div className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${isCheckedSem1 ? 'bg-primary/5 border-primary/20' : 'bg-background border-muted'}`}>
+                          <div className={`flex flex-row flex-wrap items-center justify-between gap-1.5 p-2.5 rounded-lg border transition-colors ${isCheckedSem1 ? 'bg-primary/5 border-primary/20' : 'bg-background border-muted'}`}>
                             <label className="flex items-center gap-1.5 cursor-pointer select-none">
                               <input 
                                 type="checkbox" 
@@ -629,7 +700,7 @@ const DocentesPage = () => {
                               <span className="text-[11px] font-bold text-slate-700">1º Semestre</span>
                             </label>
                             {isCheckedSem1 && (
-                              <div className="flex items-center gap-1 ml-2 animate-in fade-in duration-200">
+                              <div className="flex items-center gap-1 ml-auto sm:ml-2 animate-in fade-in duration-200">
                                 <span className="text-[10px] text-muted-foreground font-black">AP:</span>
                                 <input 
                                   type="number" 
@@ -645,7 +716,7 @@ const DocentesPage = () => {
                           </div>
 
                           {/* 2º Semestre */}
-                          <div className={`flex items-center justify-between p-2 rounded-lg border transition-colors ${isCheckedSem2 ? 'bg-primary/5 border-primary/20' : 'bg-background border-muted'}`}>
+                          <div className={`flex flex-row flex-wrap items-center justify-between gap-1.5 p-2.5 rounded-lg border transition-colors ${isCheckedSem2 ? 'bg-primary/5 border-primary/20' : 'bg-background border-muted'}`}>
                             <label className="flex items-center gap-1.5 cursor-pointer select-none">
                               <input 
                                 type="checkbox" 
@@ -656,7 +727,7 @@ const DocentesPage = () => {
                               <span className="text-[11px] font-bold text-slate-700">2º Semestre</span>
                             </label>
                             {isCheckedSem2 && (
-                              <div className="flex items-center gap-1 ml-2 animate-in fade-in duration-200">
+                              <div className="flex items-center gap-1 ml-auto sm:ml-2 animate-in fade-in duration-200">
                                 <span className="text-[10px] text-muted-foreground font-black">AP:</span>
                                 <input 
                                   type="number" 
