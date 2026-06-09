@@ -46,7 +46,7 @@ const LoginPage = () => {
         {/* Left Column - Blue Panel (Hidden on mobile) */}
         <div className="hidden md:flex flex-col justify-between bg-primary p-12 text-white relative overflow-hidden">
           {/* Subtle light overlay to match template style */}
-          <div className="absolute inset-0 bg-gradient-to-tr from-black/10 to-transparent pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/10 to-transparent pointer-events-none" />
           
           <div className="space-y-8 z-10">
             <div className="flex items-center gap-3">
@@ -84,7 +84,7 @@ const LoginPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6 p-8 bg-gradient-to-br from-blue-50/30 via-white to-white dark:from-slate-900/30 dark:via-slate-950 dark:to-slate-950 rounded-[32px] border border-blue-100/50 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(37,99,235,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
+            <form onSubmit={handleSubmit} className="space-y-6 p-8 bg-gradient-to-br from-blue-50/30 via-white to-white dark:bg-slate-900/80 rounded-[32px] border border-blue-100/50 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(37,99,235,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.15)]">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
                   Nome de Utilizador
