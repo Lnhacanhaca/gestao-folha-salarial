@@ -58,7 +58,7 @@ const LoginPage = () => {
             
             <div className="space-y-4 pt-4">
               <h2 className="text-3xl font-black leading-tight">
-                Plataforma Inteligente de Gestão de Folhas Salariais
+                Plataforma de Gestão de Folhas Salariais
               </h2>
               <p className="text-white/80 text-sm leading-relaxed">
                 Faça o lançamento, controle e emissão das folhas de salário dos docentes em regime pós-laboral de forma simples, transparente e rápida.
