@@ -400,7 +400,7 @@ const RelatoriosPage = () => {
       {/* Ofício - Print Ready (Only for Geral) */}
       {cursoId === 1 && !loading && viewMode === 'oficio' && (
         <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[800px] print:p-0 print:border-0 print:shadow-none w-full max-w-[850px] mx-auto print:max-w-none overflow-x-auto">
-          <div className="min-w-[800px] print:min-w-0">
+          <div className="print:min-w-0">
             <div className="text-center mb-6" style={{ fontSize: '12pt' }}>
               <img src="/emblema.png" alt="República de Moçambique" className="h-20 mx-auto mb-2 object-contain" />
               <h2 className="font-bold uppercase tracking-wider" style={{ fontSize: '12pt' }}>República de Moçambique</h2>
@@ -432,21 +432,21 @@ const RelatoriosPage = () => {
               </div>
 
               {/* Signatures block moved right after point 3 */}
-              <div className="mt-6 text-center space-y-6 w-full print-no-break" style={{ fontSize: '12pt' }}>
+              <div className="mt-8 text-center space-y-8 w-full print-no-break" style={{ fontSize: '12pt' }}>
                 <p>Tete, {new Date().getDate()} de {meses[new Date().getMonth()]} de {new Date().getFullYear()}</p>
                 <p className="font-bold uppercase tracking-wider" style={{ fontSize: '12pt' }}>Os Directores de Curso</p>
 
-                <div className="flex flex-col sm:flex-row justify-around items-center gap-8 mt-6 w-full">
-                  <div className="space-y-2">
-                    <div className="border-b border-black w-52 mx-auto"></div>
+                <div className="flex flex-col items-center gap-10 mt-8 w-full">
+                  <div className="space-y-2 text-center w-full">
+                    <div className="border-b border-black w-60 mx-auto"></div>
                     <p className="font-semibold" style={{ fontSize: '12pt' }}>/MSc. Lucas Jordão Simoco/</p>
                   </div>
-                  <div className="space-y-2">
-                    <div className="border-b border-black w-52 mx-auto"></div>
+                  <div className="space-y-2 text-center w-full">
+                    <div className="border-b border-black w-60 mx-auto"></div>
                     <p className="font-semibold" style={{ fontSize: '12pt' }}>/MSc. Almeida Albuquerque/</p>
                   </div>
-                  <div className="space-y-2">
-                    <div className="border-b border-black w-52 mx-auto"></div>
+                  <div className="space-y-2 text-center w-full">
+                    <div className="border-b border-black w-60 mx-auto"></div>
                     <p className="font-semibold" style={{ fontSize: '12pt' }}>/MSc. Luís Jorge Nhacanhaca/</p>
                   </div>
                 </div>
