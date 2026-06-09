@@ -22,6 +22,7 @@ CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0"]
 FROM nginx:alpine AS production
 # Copia o build estático gerado pelo estágio builder
 COPY --from=builder /app/dist /usr/share/nginx/html
-# Configuração Nginx interna opcional pode ser adicionada aqui
+# Copia a configuração personalizada do Nginx para suportar SPA Routing
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
