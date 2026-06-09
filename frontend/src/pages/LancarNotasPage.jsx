@@ -524,13 +524,13 @@ const LancarNotasPage = () => {
           <div className="flex flex-col sm:flex-row bg-secondary/50 p-1 rounded-xl border select-none w-full sm:w-fit mt-3 gap-1 sm:gap-0">
             <button
               onClick={() => setInputMode('matrix')}
-              className={`w-full sm:w-auto px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${inputMode === 'matrix' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`w-full sm:w-auto px-4 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition-all ${inputMode === 'matrix' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Vista Geral (Tabela)
             </button>
             <button
               onClick={() => setInputMode('individual')}
-              className={`w-full sm:w-auto px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${inputMode === 'individual' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`w-full sm:w-auto px-4 py-2 sm:py-1.5 rounded-lg text-xs font-bold transition-all ${inputMode === 'individual' ? 'bg-primary text-white shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Docente por Docente
             </button>
@@ -581,7 +581,7 @@ const LancarNotasPage = () => {
               ), { duration: Infinity, style: { minWidth: '350px' } });
             }}
             disabled={dados.length === 0 || isReadOnly}
-            className="bg-destructive/10 hover:bg-destructive/20 text-destructive px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 font-medium disabled:opacity-50 w-full sm:w-auto"
+            className="bg-destructive/10 hover:bg-destructive/20 text-destructive px-4 py-3 sm:py-2 rounded-lg transition-colors flex items-center justify-center gap-2 font-medium disabled:opacity-50 w-full sm:w-auto"
           >
             <Trash2 size={18} />
             Limpar
@@ -590,7 +590,7 @@ const LancarNotasPage = () => {
           <button 
             onClick={handleSave}
             disabled={loading || dados.length === 0 || isReadOnly}
-            className="bg-primary hover:bg-primary/90 text-white px-6 py-2 rounded-lg transition-all flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20 disabled:opacity-50 w-full sm:w-auto"
+            className="bg-primary hover:bg-primary/90 text-white px-6 py-3 sm:py-2 rounded-lg transition-all flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20 disabled:opacity-50 w-full sm:w-auto"
           >
             {loading ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
             Gravar Dados
@@ -599,7 +599,7 @@ const LancarNotasPage = () => {
       </div>
 
       {/* Selectors */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-card p-6 rounded-2xl border shadow-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-card p-4 sm:p-6 rounded-2xl border shadow-sm">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-muted-foreground">Mês de Referência</label>
           <select 
@@ -714,16 +714,20 @@ const LancarNotasPage = () => {
 
       {/* Input Mode Conditional Rendering */}
       {inputMode === 'individual' ? (
-        <div className="flex flex-col-reverse lg:grid lg:grid-cols-4 gap-6 animate-in fade-in duration-300">
-          {/* Left Column: Sidebar of Docentes */}
+        <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6 animate-in fade-in duration-300">
+          {/* Left/Top Column: Sidebar of Docentes */}
           <div className="lg:col-span-1 flex flex-col gap-4">
             <button 
               type="button"
               onClick={() => setShowMobileList(!showMobileList)}
-              className="lg:hidden w-full flex items-center justify-between bg-card hover:bg-muted/50 border p-3.5 rounded-2xl shadow-sm text-xs font-bold text-slate-700 select-none cursor-pointer transition-colors"
+              className="lg:hidden w-full flex items-center justify-between bg-card hover:bg-muted/50 border p-3.5 rounded-2xl shadow-sm text-xs text-slate-700 select-none cursor-pointer transition-colors"
             >
-              <span className="flex items-center gap-2">📋 Lista de Docentes ({dados.length})</span>
-              <span className="text-primary font-black">{showMobileList ? 'Ocultar ↑' : 'Exibir ↓'}</span>
+              <span className="flex items-center gap-2 font-medium text-left">
+                👤 Docente Activo: <strong className="text-primary font-bold">{selectedDocente?.docente_nome || 'Nenhum'}</strong>
+              </span>
+              <span className="text-primary font-black bg-primary/5 px-2.5 py-1 rounded-lg border border-primary/10 whitespace-nowrap">
+                {showMobileList ? 'Fechar Lista' : `Ver Todos (${dados.length})`}
+              </span>
             </button>
 
             <div className={`bg-card rounded-2xl border shadow-sm flex flex-col lg:h-[550px] overflow-hidden transition-all duration-300 ${
@@ -744,37 +748,40 @@ const LancarNotasPage = () => {
               </div>
               
               <div className="flex-1 overflow-y-auto divide-y">
-              {dados.map((doc, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedDocenteIndex(idx)}
-                  className={`w-full text-left p-3.5 flex flex-col gap-1 transition-all ${
-                    idx === activeDocenteIndex 
-                      ? 'bg-primary/5 border-l-4 border-primary' 
-                      : 'hover:bg-muted/30 border-l-4 border-transparent'
-                  }`}
-                >
-                  <span className="text-xs font-bold truncate block w-full">
-                    {doc.docente_nome || `Sem nome (${idx + 1})`}
-                  </span>
-                  <div className="flex justify-between items-center text-[10px] text-muted-foreground w-full">
-                    <span>AP: {calculateTotal(doc.semanas, 'ap')}h</span>
-                    <span className="text-primary font-bold">AD: {calculateTotal(doc.semanas, 'ad')}h</span>
+                {dados.map((doc, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setSelectedDocenteIndex(idx);
+                      setShowMobileList(false);
+                    }}
+                    className={`w-full text-left p-3.5 flex flex-col gap-1 transition-all ${
+                      idx === activeDocenteIndex 
+                        ? 'bg-primary/5 border-l-4 border-primary' 
+                        : 'hover:bg-muted/30 border-l-4 border-transparent'
+                    }`}
+                  >
+                    <span className="text-xs font-bold truncate block w-full">
+                      {doc.docente_nome || `Sem nome (${idx + 1})`}
+                    </span>
+                    <div className="flex justify-between items-center text-[10px] text-muted-foreground w-full">
+                      <span>AP: {calculateTotal(doc.semanas, 'ap')}h</span>
+                      <span className="text-primary font-bold">AD: {calculateTotal(doc.semanas, 'ad')}h</span>
+                    </div>
+                  </button>
+                ))}
+                
+                {dados.length === 0 && (
+                  <div className="p-8 text-center text-xs text-muted-foreground italic">
+                    Nenhum docente adicionado.
                   </div>
-                </button>
-              ))}
-              
-              {dados.length === 0 && (
-                <div className="p-8 text-center text-xs text-muted-foreground italic">
-                  Nenhum docente adicionado.
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-          {/* Right Column: Focused Edit Form */}
-          <div className="lg:col-span-3 bg-card rounded-2xl border shadow-sm p-6 flex flex-col justify-between min-h-[550px]">
+          {/* Right/Bottom Column: Focused Edit Form */}
+          <div className="lg:col-span-3 bg-card rounded-2xl border shadow-sm p-4 sm:p-6 flex flex-col justify-between min-h-[550px]">
             {selectedDocente ? (
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b">
@@ -805,7 +812,7 @@ const LancarNotasPage = () => {
                     <button
                       onClick={() => handleSaveDocente(activeDocenteIndex)}
                       disabled={loading || isReadOnly}
-                      className="flex-1 sm:flex-none justify-center bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg transition-all flex items-center gap-2 text-xs font-bold disabled:opacity-50 shadow-md shadow-primary/20"
+                      className="flex-1 sm:flex-none justify-center bg-primary hover:bg-primary/90 text-white px-4 py-3 sm:py-2 rounded-lg transition-all flex items-center gap-2 text-xs font-bold disabled:opacity-50 shadow-md shadow-primary/20"
                       title="Salvar horas lançadas para este docente"
                     >
                       <Save size={16} />
@@ -814,7 +821,7 @@ const LancarNotasPage = () => {
                     <button
                       onClick={() => handleRemoveDocente(activeDocenteIndex)}
                       disabled={isReadOnly}
-                      className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30"
+                      className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30 flex items-center justify-center"
                       title="Remover Docente"
                     >
                       <Trash2 size={18} />
@@ -823,44 +830,49 @@ const LancarNotasPage = () => {
                 </div>
 
                 {/* 5 Weeks Grid */}
-                <div className="flex overflow-x-auto md:grid md:grid-cols-5 gap-4 pb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 pb-4">
                   {selectedDocente.semanas.map((s, sIdx) => (
-                    <div key={sIdx} className="bg-secondary/20 p-4 rounded-xl border flex flex-col gap-3 relative overflow-hidden min-w-[140px] flex-shrink-0 md:flex-shrink">
+                    <div key={sIdx} className="bg-secondary/20 p-4 rounded-xl border flex flex-col gap-3 relative overflow-hidden w-full">
                       <div className="absolute top-0 left-0 right-0 h-1 bg-primary/20" />
                       <div className="text-center">
                         <span className="text-xs font-bold text-slate-800">Semana {s.semana}</span>
-                        <span className="block text-[9px] text-muted-foreground mt-0.5 min-h-[24px]">
+                        <span className="block text-[9px] text-muted-foreground mt-0.5 min-h-[18px] sm:min-h-[24px]">
                           {weekRanges[sIdx]}
                         </span>
                       </div>
                       
-                      <div className="space-y-2">
-                        <div>
-                          <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">AP</label>
-                          <input
-                            type="number"
-                            value={s.ap}
-                            onChange={(e) => updateCell(activeDocenteIndex, sIdx, 'ap', e.target.value)}
-                            disabled={isReadOnly}
-                            className="w-full bg-background border rounded-lg p-2 text-center text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20"
-                            placeholder="0"
-                            min="0"
-                          />
+                      <div className="grid grid-cols-1 gap-2.5">
+                        {/* AP and AD Inputs Grid */}
+                        <div className="grid grid-cols-2 sm:grid-cols-1 gap-2.5">
+                          <div>
+                            <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">AP</label>
+                            <input
+                              type="number"
+                              value={s.ap}
+                              onChange={(e) => updateCell(activeDocenteIndex, sIdx, 'ap', e.target.value)}
+                              disabled={isReadOnly}
+                              className="w-full bg-background border rounded-lg p-2 text-center text-xs font-bold outline-none focus:ring-2 focus:ring-primary/20"
+                              placeholder="0"
+                              min="0"
+                            />
+                          </div>
+                          <div className="p-2 bg-primary/10 border-2 border-primary/30 rounded-xl shadow-sm relative transition-all focus-within:border-primary/60 focus-within:bg-primary/15 flex flex-col justify-between">
+                            <label className="text-[10px] font-black text-primary uppercase tracking-wider block mb-0.5">AD</label>
+                            <input
+                              type="number"
+                              value={s.ad}
+                              onChange={(e) => updateCell(activeDocenteIndex, sIdx, 'ad', e.target.value)}
+                              disabled={isReadOnly}
+                              className="w-full bg-white border border-primary/20 rounded-lg p-1.5 text-center text-sm font-black text-primary outline-none focus:ring-2 focus:ring-primary shadow-inner"
+                              placeholder="0"
+                              min="0"
+                            />
+                          </div>
                         </div>
-                        <div className="mt-3 p-2.5 bg-primary/10 border-2 border-primary/30 rounded-xl shadow-sm relative transition-all focus-within:border-primary/60 focus-within:bg-primary/15">
-                          <label className="text-[11px] font-black text-primary uppercase tracking-wider block mb-1">Aulas Dadas (AD)</label>
-                          <input
-                            type="number"
-                            value={s.ad}
-                            onChange={(e) => updateCell(activeDocenteIndex, sIdx, 'ad', e.target.value)}
-                            disabled={isReadOnly}
-                            className="w-full bg-white border border-primary/20 rounded-lg p-2.5 text-center text-sm font-black text-primary outline-none focus:ring-2 focus:ring-primary shadow-inner"
-                            placeholder="0"
-                            min="0"
-                          />
-                        </div>
+                        
+                        {/* VP and VD Inputs Grid (Exams Mode) */}
                         {isExamMode && (
-                          <div className="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-muted/50">
+                          <div className="grid grid-cols-2 sm:grid-cols-1 gap-2.5 pt-2.5 border-t border-muted/50">
                             <div>
                               <label className="text-[9px] font-bold text-muted-foreground block mb-0.5" title="Vigias Programadas">VP</label>
                               <input
@@ -873,14 +885,14 @@ const LancarNotasPage = () => {
                                 min="0"
                               />
                             </div>
-                            <div className="bg-amber-50/50 rounded-lg">
-                              <label className="text-[9px] font-black text-amber-700 block mb-0.5 px-1" title="Vigias Dadas">VD</label>
+                            <div className="bg-amber-50/50 p-1 rounded-lg border border-amber-100 flex flex-col justify-between">
+                              <label className="text-[9px] font-black text-amber-700 block mb-0.5 text-center" title="Vigias Dadas">VD</label>
                               <input
                                 type="number"
                                 value={s.vd}
                                 onChange={(e) => updateCell(activeDocenteIndex, sIdx, 'vd', e.target.value)}
                                 disabled={isReadOnly}
-                                className="w-full bg-white border border-amber-200 rounded-lg p-1.5 text-center text-xs font-black text-amber-700 outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
+                                className="w-full bg-white border border-amber-200 rounded-lg p-1 text-center text-xs font-black text-amber-700 outline-none focus:ring-2 focus:ring-amber-500 shadow-sm"
                                 placeholder="0"
                                 min="0"
                               />
@@ -893,38 +905,38 @@ const LancarNotasPage = () => {
                 </div>
 
                 {/* Total box for selected teacher */}
-                <div className="bg-secondary/10 border p-4 rounded-xl flex flex-wrap items-center justify-around gap-4 text-center mt-6">
+                <div className="bg-secondary/10 border p-4 rounded-xl grid grid-cols-2 sm:grid-cols-3 md:flex md:items-center md:justify-around gap-4 text-center mt-6">
                   <div>
                     <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total AP</span>
                     <span className="text-lg font-black text-slate-800">{calculateTotal(selectedDocente.semanas, 'ap')}h</span>
                   </div>
-                  <div className="w-px h-8 bg-muted" />
+                  <div className="hidden md:block w-px h-8 bg-muted" />
                   <div>
                     <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total AD</span>
                     <span className="text-lg font-black text-primary">{calculateTotal(selectedDocente.semanas, 'ad')}h</span>
                   </div>
                   {isExamMode && (
                     <>
-                      <div className="w-px h-8 bg-muted" />
+                      <div className="hidden md:block w-px h-8 bg-muted" />
                       <div>
                         <span className="text-[10px] uppercase font-bold text-muted-foreground block">Total VP</span>
                         <span className="text-lg font-black text-slate-800">{calculateTotal(selectedDocente.semanas, 'vp')}h</span>
                       </div>
-                      <div className="w-px h-8 bg-muted" />
+                      <div className="hidden md:block w-px h-8 bg-muted" />
                       <div>
                         <span className="text-[10px] uppercase font-bold text-amber-700 block">Total VD</span>
                         <span className="text-lg font-black text-amber-600">{calculateTotal(selectedDocente.semanas, 'vd')}h</span>
                       </div>
                     </>
                   )}
-                  <div className="w-px h-8 bg-muted" />
+                  <div className="hidden md:block w-px h-8 bg-muted" />
                   <div>
                     <span className="text-[10px] uppercase font-bold text-rose-500 block">Previsão Faltas</span>
                     <span className="text-lg font-black text-rose-600">
                       {formatarFaltas(calculateTotalFaltasHoras(selectedDocente.semanas))}
                     </span>
                   </div>
-                  <div className="w-px h-8 bg-muted" />
+                  <div className="hidden md:block w-px h-8 bg-muted" />
                   <div>
                     <span className="text-[10px] uppercase font-bold text-muted-foreground block">Valor a Receber</span>
                     <span className="text-lg font-black text-emerald-600">
@@ -943,134 +955,257 @@ const LancarNotasPage = () => {
           </div>
         </div>
       ) : (
-        /* Matrix Table */
-        <div className="bg-card rounded-2xl border shadow-sm overflow-hidden animate-in fade-in duration-300">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[1000px]">
-              <thead>
-                <tr className="bg-secondary/50 border-b">
-                  <th className="p-4 font-bold text-sm w-64">Docente</th>
-                  {[1, 2, 3, 4, 5].map((w, idx) => (
-                    <th key={w} className="p-4 font-bold text-sm text-center border-l" colSpan={2}>
-                      Semana {w}
-                      <span className="block text-[10px] text-muted-foreground font-normal mt-0.5">
-                        {weekRanges[idx]}
-                      </span>
-                    </th>
-                  ))}
-                  <th className="p-4 font-bold text-sm text-center border-l bg-primary/5" colSpan={2}>
-                    Total Mensal
-                  </th>
-                  <th className="p-4 font-bold text-sm text-center border-l bg-rose-50 text-rose-800" rowSpan={2}>
-                    Faltas
-                  </th>
-                  <th className="p-4 w-24 text-center">Ações</th>
-                </tr>
-                <tr className="bg-secondary/30 border-b text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="p-2">Nome</th>
-                  {[1, 2, 3, 4, 5].map(w => (
-                    <React.Fragment key={w}>
-                      <th className="p-2 text-center border-l">AP</th>
-                      <th className="p-2 text-center">AD</th>
-                    </React.Fragment>
-                  ))}
-                  <th className="p-2 text-center border-l bg-primary/5">AP</th>
-                  <th className="p-2 text-center bg-primary/5">AD</th>
-                  <th className="p-2 text-center"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {dados.map((doc, dIdx) => (
-                  <tr key={dIdx} className="hover:bg-muted/30 transition-colors">
-                    <td className="p-2 flex items-center justify-between min-w-[200px]">
-                      <input 
-                        type="text" 
-                        value={doc.docente_nome} 
-                        onChange={(e) => {
-                           const n = [...dados];
-                           n[dIdx].docente_nome = e.target.value;
-                           setDados(n);
-                        }}
-                        disabled={isReadOnly}
-                        placeholder="Nome do Docente"
-                        className="bg-transparent border-none focus:ring-0 font-medium disabled:opacity-70 flex-1 outline-none"
-                      />
-                      {(doc.retificada === 1 || doc.retificada === true) && (
-                        <span className="text-[10px] text-amber-600 font-extrabold ml-2 animate-pulse whitespace-nowrap">
-                          (Retificada)
+        /* Matrix View (Responsive Table for Desktop, Cards for Mobile/Tablets) */
+        <div className="space-y-4 animate-in fade-in duration-300">
+          {/* Desktop Matrix Table */}
+          <div className="hidden lg:block bg-card rounded-2xl border shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse min-w-[1000px]">
+                <thead>
+                  <tr className="bg-secondary/50 border-b">
+                    <th className="p-4 font-bold text-sm w-64">Docente</th>
+                    {[1, 2, 3, 4, 5].map((w, idx) => (
+                      <th key={w} className="p-4 font-bold text-sm text-center border-l" colSpan={2}>
+                        Semana {w}
+                        <span className="block text-[10px] text-muted-foreground font-normal mt-0.5">
+                          {weekRanges[idx]}
                         </span>
-                      )}
-                    </td>
-                    {doc.semanas.map((s, sIdx) => (
-                      <React.Fragment key={sIdx}>
-                        <td className="p-2 border-l">
+                      </th>
+                    ))}
+                    <th className="p-4 font-bold text-sm text-center border-l bg-primary/5" colSpan={2}>
+                      Total Mensal
+                    </th>
+                    <th className="p-4 font-bold text-sm text-center border-l bg-rose-50 text-rose-800" rowSpan={2}>
+                      Faltas
+                    </th>
+                    <th className="p-4 w-24 text-center">Ações</th>
+                  </tr>
+                  <tr className="bg-secondary/30 border-b text-xs uppercase tracking-wider text-muted-foreground">
+                    <th className="p-2">Nome</th>
+                    {[1, 2, 3, 4, 5].map(w => (
+                      <React.Fragment key={w}>
+                        <th className="p-2 text-center border-l">AP</th>
+                        <th className="p-2 text-center">AD</th>
+                      </React.Fragment>
+                    ))}
+                    <th className="p-2 text-center border-l bg-primary/5">AP</th>
+                    <th className="p-2 text-center bg-primary/5">AD</th>
+                    <th className="p-2 text-center"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {dados.map((doc, dIdx) => (
+                    <tr key={dIdx} className="hover:bg-muted/30 transition-colors">
+                      <td className="p-2 flex items-center justify-between min-w-[200px]">
+                        <input 
+                          type="text" 
+                          value={doc.docente_nome} 
+                          onChange={(e) => {
+                             const n = [...dados];
+                             n[dIdx].docente_nome = e.target.value;
+                             setDados(n);
+                          }}
+                          disabled={isReadOnly}
+                          placeholder="Nome do Docente"
+                          className="bg-transparent border-none focus:ring-0 font-medium disabled:opacity-70 flex-1 outline-none"
+                        />
+                        {(doc.retificada === 1 || doc.retificada === true) && (
+                          <span className="text-[10px] text-amber-600 font-extrabold ml-2 animate-pulse whitespace-nowrap">
+                            (Retificada)
+                          </span>
+                        )}
+                      </td>
+                      {doc.semanas.map((s, sIdx) => (
+                        <React.Fragment key={sIdx}>
+                          <td className="p-2 border-l">
+                            <input 
+                              type="number" 
+                              value={s.ap} 
+                              onChange={(e) => updateCell(dIdx, sIdx, 'ap', e.target.value)}
+                              disabled={isReadOnly}
+                              className="w-16 text-center bg-transparent border-none focus:ring-0 disabled:opacity-70"
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input 
+                              type="number" 
+                              value={s.ad} 
+                              onChange={(e) => updateCell(dIdx, sIdx, 'ad', e.target.value)}
+                              disabled={isReadOnly}
+                              className="w-16 text-center bg-transparent border-none focus:ring-0 text-primary font-bold disabled:opacity-70"
+                            />
+                          </td>
+                        </React.Fragment>
+                      ))}
+                      <td className="p-2 border-l bg-primary/5 text-center font-bold">
+                        {calculateTotal(doc.semanas, 'ap')}
+                      </td>
+                      <td className="p-2 bg-primary/5 text-center font-bold text-primary">
+                        {calculateTotal(doc.semanas, 'ad')}
+                      </td>
+                      <td className="p-2 border-l bg-rose-50/50 text-center font-semibold text-rose-600 text-xs">
+                        {formatarFaltas(calculateTotalFaltasHoras(doc.semanas))}
+                      </td>
+                      <td className="p-2 text-center flex items-center justify-center gap-1">
+                        <button 
+                          onClick={() => handleSaveDocente(dIdx)}
+                          disabled={loading || isReadOnly}
+                          className="text-primary hover:bg-primary/10 p-2 rounded-lg transition-colors disabled:opacity-30"
+                          title="Gravar este docente"
+                        >
+                          <Save size={16} />
+                        </button>
+                        <button 
+                          onClick={() => handleRemoveDocente(dIdx)}
+                          disabled={isReadOnly}
+                          className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
+                          title="Remover Docente"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {dados.length === 0 && (
+                    <tr>
+                      <td colSpan={14} className="p-12 text-center text-muted-foreground italic">
+                        Nenhum docente adicionado para este curso. Adicione manualmente ou importe um CSV.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            <div className="p-4 border-t bg-secondary/10">
+              <button 
+                onClick={addDocente}
+                disabled={isReadOnly}
+                className="flex items-center gap-2 text-primary font-bold hover:underline disabled:opacity-50 disabled:pointer-events-none disabled:hover:no-underline"
+              >
+                <Plus size={20} />
+                Adicionar Docente
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile/Tablet Card List (Instead of Table) */}
+          <div className="lg:hidden grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {dados.map((doc, dIdx) => (
+              <div key={dIdx} className="bg-card rounded-2xl border p-4 shadow-sm flex flex-col gap-4">
+                {/* Teacher Header */}
+                <div className="flex items-center justify-between pb-3 border-b border-muted">
+                  <div className="flex-1 min-w-0">
+                    <label className="text-[10px] font-semibold text-muted-foreground block mb-0.5">Nome do Docente</label>
+                    <input 
+                      type="text" 
+                      value={doc.docente_nome} 
+                      onChange={(e) => {
+                         const n = [...dados];
+                         n[dIdx].docente_nome = e.target.value;
+                         setDados(n);
+                      }}
+                      disabled={isReadOnly}
+                      placeholder="Nome do Docente"
+                      className="bg-transparent border-none p-0 focus:ring-0 font-bold text-slate-800 text-sm w-full outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-2">
+                    {(doc.retificada === 1 || doc.retificada === true) && (
+                      <span className="text-[9px] text-amber-600 font-extrabold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                        Retificada
+                      </span>
+                    )}
+                    <button 
+                      onClick={() => handleSaveDocente(dIdx)}
+                      disabled={loading || isReadOnly}
+                      className="text-primary hover:bg-primary/10 p-2 rounded-lg transition-colors border border-primary/20 bg-primary/5 disabled:opacity-30 flex items-center justify-center"
+                      title="Gravar este docente"
+                    >
+                      <Save size={16} />
+                    </button>
+                    <button 
+                      onClick={() => handleRemoveDocente(dIdx)}
+                      disabled={isReadOnly}
+                      className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors border border-destructive/20 bg-destructive/5 disabled:opacity-30 flex items-center justify-center"
+                      title="Remover Docente"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5 Weeks Inputs */}
+                <div className="grid grid-cols-1 gap-2.5">
+                  {doc.semanas.map((s, sIdx) => (
+                    <div key={sIdx} className="flex items-center justify-between gap-3 bg-secondary/10 p-2.5 rounded-xl border border-slate-100/50">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-xs font-bold text-slate-700 block">Semana {s.semana}</span>
+                        <span className="text-[9px] text-muted-foreground block truncate">
+                          {weekRanges[sIdx]}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-14">
+                          <label className="text-[9px] font-semibold text-muted-foreground block text-center mb-0.5">AP</label>
                           <input 
                             type="number" 
                             value={s.ap} 
                             onChange={(e) => updateCell(dIdx, sIdx, 'ap', e.target.value)}
                             disabled={isReadOnly}
-                            className="w-16 text-center bg-transparent border-none focus:ring-0 disabled:opacity-70"
+                            className="w-full text-center bg-background border rounded-lg py-1 text-xs font-bold focus:ring-2 focus:ring-primary/20"
                           />
-                        </td>
-                        <td className="p-2">
+                        </div>
+                        <div className="w-16">
+                          <label className="text-[9px] font-black text-primary block text-center mb-0.5">AD</label>
                           <input 
                             type="number" 
                             value={s.ad} 
                             onChange={(e) => updateCell(dIdx, sIdx, 'ad', e.target.value)}
                             disabled={isReadOnly}
-                            className="w-16 text-center bg-transparent border-none focus:ring-0 text-primary font-bold disabled:opacity-70"
+                            className="w-full text-center bg-white border border-primary/30 text-primary font-black rounded-lg py-1 text-xs focus:ring-2 focus:ring-primary shadow-sm"
                           />
-                        </td>
-                      </React.Fragment>
-                    ))}
-                    <td className="p-2 border-l bg-primary/5 text-center font-bold">
-                      {calculateTotal(doc.semanas, 'ap')}
-                    </td>
-                    <td className="p-2 bg-primary/5 text-center font-bold text-primary">
-                      {calculateTotal(doc.semanas, 'ad')}
-                    </td>
-                    <td className="p-2 border-l bg-rose-50/50 text-center font-semibold text-rose-600 text-xs">
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Monthly Summary Footer */}
+                <div className="grid grid-cols-3 gap-2 pt-3 border-t border-muted text-center bg-secondary/5 rounded-xl p-2.5">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground block">Total AP</span>
+                    <span className="text-xs font-black text-slate-800">{calculateTotal(doc.semanas, 'ap')}h</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-primary block">Total AD</span>
+                    <span className="text-xs font-black text-primary">{calculateTotal(doc.semanas, 'ad')}h</span>
+                  </div>
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-rose-500 block">Faltas</span>
+                    <span className="text-[9px] font-extrabold text-rose-600 block">
                       {formatarFaltas(calculateTotalFaltasHoras(doc.semanas))}
-                    </td>
-                    <td className="p-2 text-center flex items-center justify-center gap-1">
-                      <button 
-                        onClick={() => handleSaveDocente(dIdx)}
-                        disabled={loading || isReadOnly}
-                        className="text-primary hover:bg-primary/10 p-2 rounded-lg transition-colors disabled:opacity-30"
-                        title="Gravar este docente"
-                      >
-                        <Save size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleRemoveDocente(dIdx)}
-                        disabled={isReadOnly}
-                        className="text-destructive hover:bg-destructive/10 p-2 rounded-lg transition-colors disabled:opacity-30 disabled:pointer-events-none"
-                        title="Remover Docente"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {dados.length === 0 && (
-                  <tr>
-                    <td colSpan={14} className="p-12 text-center text-muted-foreground italic">
-                      Nenhum docente adicionado para este curso. Adicione manualmente ou importe um CSV.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="p-4 border-t bg-secondary/10">
-            <button 
-              onClick={addDocente}
-              disabled={isReadOnly}
-              className="flex items-center gap-2 text-primary font-bold hover:underline disabled:opacity-50 disabled:pointer-events-none disabled:hover:no-underline"
-            >
-              <Plus size={20} />
-              Adicionar Docente
-            </button>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {dados.length === 0 && (
+              <div className="bg-card rounded-2xl border p-8 text-center text-muted-foreground italic">
+                Nenhum docente adicionado para este curso. Adicione manualmente ou importe um CSV.
+              </div>
+            )}
+
+            <div className="bg-card rounded-2xl border p-4">
+              <button 
+                onClick={addDocente}
+                disabled={isReadOnly}
+                className="w-full flex items-center justify-center gap-2 text-primary font-bold bg-primary/5 hover:bg-primary/10 border border-primary/20 py-3 rounded-xl transition-all disabled:opacity-50 disabled:pointer-events-none"
+              >
+                <Plus size={20} />
+                Adicionar Docente
+              </button>
+            </div>
           </div>
         </div>
       )}

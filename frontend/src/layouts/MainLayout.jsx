@@ -175,7 +175,7 @@ const MainLayout = () => {
         </aside>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-w-0">
            {/* Breadcrumb Header */}
             <div className="bg-card px-4 sm:px-8 py-4 sm:py-5 flex items-center justify-between border-b border-border no-print">
                <div>
@@ -188,7 +188,7 @@ const MainLayout = () => {
                </div>
             </div>
 
-            <main className="p-4 sm:p-8 max-w-[1600px] w-full mx-auto flex-1">
+            <main className="p-4 sm:p-8 max-w-[1600px] w-full mx-auto flex-1 min-w-0">
                <Outlet />
             </main>
         </div>

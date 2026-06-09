@@ -150,7 +150,7 @@ const AuditPage = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <ShieldAlert className="text-primary" size={32} />
@@ -159,7 +159,7 @@ const AuditPage = () => {
           <p className="text-muted-foreground">Registo de atividades de segurança e ações realizadas no SGFS</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
           <button 
             onClick={handleExportCSV}
             disabled={!filteredLogs || filteredLogs.length === 0}
@@ -249,9 +249,10 @@ const AuditPage = () => {
         </div>
       </div>
 
-      {/* Logs Table */}
+      {/* Logs View (Responsive Table for Desktop, Cards for Mobile/Tablets) */}
       <div className="bg-card rounded-2xl border shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left min-w-[800px]">
             <thead>
               <tr className="bg-muted/50 border-b text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -293,6 +294,38 @@ const AuditPage = () => {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile/Tablet Card Grid View */}
+        <div className="lg:hidden divide-y divide-border sm:divide-y-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:p-4 bg-muted/5">
+          {filteredLogs && filteredLogs.length > 0 ? (
+            filteredLogs.map((log) => (
+              <div key={log.id} className="p-4 space-y-3 hover:bg-muted/10 transition-colors bg-card border rounded-2xl shadow-sm hover:shadow-md">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-mono text-muted-foreground block">
+                      {new Date(log.created_at).toLocaleString('pt-PT')}
+                    </span>
+                    <span className="font-bold text-slate-800 text-sm">{log.username}</span>
+                  </div>
+                  <div className="shrink-0 scale-90 origin-top-right">
+                    {getActionBadge(log.action)}
+                  </div>
+                </div>
+                <div className="text-[10px] font-semibold text-slate-500 bg-secondary/30 px-2 py-0.5 rounded w-fit">
+                  {log.target_type} {log.target_id && `(ID: ${log.target_id})`}
+                </div>
+                <p className="text-xs text-slate-600 leading-relaxed break-words font-normal">
+                  {log.details}
+                </p>
+              </div>
+            ))
+          ) : (
+            <div className="p-12 text-center text-muted-foreground col-span-2">
+              <ShieldAlert className="mx-auto text-slate-300 mb-2" size={32} />
+              Nenhum registo de auditoria encontrado correspondente aos critérios.
+            </div>
+          )}
         </div>
       </div>
     </div>

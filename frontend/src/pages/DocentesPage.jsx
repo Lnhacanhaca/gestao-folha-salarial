@@ -372,13 +372,13 @@ const DocentesPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Docentes</h1>
           <p className="text-muted-foreground">Gestão unificada de professores do Curso Nocturno</p>
         </div>
 
-        <div className="flex flex-row flex-wrap items-center gap-2.5 w-full md:w-auto mt-4 md:mt-0">
+        <div className="flex flex-row flex-wrap items-center gap-2.5 w-full lg:w-auto mt-4 lg:mt-0">
           {isAdmin && (
             <label className={`w-[calc(50%-5px)] sm:w-auto justify-center bg-secondary hover:bg-secondary/80 text-foreground px-4 py-3 sm:py-2.5 rounded-xl cursor-pointer transition-all flex items-center gap-2 font-bold shadow-sm text-xs sm:text-sm ${importing ? 'opacity-50 pointer-events-none' : ''}`}>
               {importing ? <Loader2 className="animate-spin" size={18} /> : <Upload size={18} />}
@@ -444,7 +444,7 @@ const DocentesPage = () => {
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-2.5 text-muted-foreground" size={18} />
@@ -501,8 +501,8 @@ const DocentesPage = () => {
           </div>
         </div>
 
-        {/* Mobile List View */}
-        <div className="md:hidden divide-y divide-border">
+        {/* Mobile/Tablet Card Grid View */}
+        <div className="lg:hidden divide-y divide-border sm:divide-y-0 sm:grid sm:grid-cols-2 sm:gap-4 sm:p-4 bg-muted/5">
           {isLoading ? (
             <div className="p-12 text-center flex flex-col items-center justify-center gap-2">
               <Loader2 className="animate-spin text-primary" size={24} />
@@ -516,10 +516,10 @@ const DocentesPage = () => {
             filteredDocentes?.map((d) => {
               const cursosArray = parseCursos(d.cursos);
               return (
-                <div key={d.id} className="p-5 space-y-4 hover:bg-muted/10 transition-colors">
+                <div key={d.id} className="p-5 space-y-4 hover:bg-muted/10 transition-colors sm:bg-card sm:border sm:rounded-2xl sm:shadow-sm sm:hover:shadow-md">
                   <div className="flex justify-between items-start gap-4">
                     <div className="space-y-1">
-                      <h3 className="font-bold text-slate-800 dark:text-white text-sm leading-tight">{d.nome}</h3>
+                      <h3 className="font-bold text-black text-sm leading-tight">{d.nome}</h3>
                       <span className="inline-block px-2 py-0.5 bg-secondary text-muted-foreground text-[10px] font-bold rounded-md">
                         {d.categoria || 'Sem Categoria'}
                       </span>
@@ -572,7 +572,7 @@ const DocentesPage = () => {
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden md:block overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left min-w-[750px]">
             <thead>
               <tr className="bg-muted/50 border-b text-xs font-bold uppercase tracking-wider text-muted-foreground">

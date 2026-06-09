@@ -278,13 +278,13 @@ const RelatoriosPage = () => {
       </style>
 
       {/* Header - No Print */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 no-print">
         <div>
           <h1 className="text-3xl font-bold">Relatórios e Folhas</h1>
           <p className="text-muted-foreground">Visualize e imprima as folhas de pagamento mensais</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full md:w-auto mt-4 md:mt-0">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full lg:w-auto mt-4 lg:mt-0">
           {cursoId === 1 && (
             <button 
               onClick={() => {
@@ -298,7 +298,7 @@ const RelatoriosPage = () => {
                   }, 1000);
                 }, 150);
               }}
-              className="bg-secondary hover:bg-secondary/90 text-foreground px-5 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-sm w-full sm:w-auto"
+              className="bg-secondary hover:bg-secondary/90 text-foreground px-5 py-3 sm:py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-sm w-full sm:w-auto"
             >
               <FileText size={18} />
               Imprimir Ofício
@@ -316,7 +316,7 @@ const RelatoriosPage = () => {
                 }, 1000);
               }, 150);
             }}
-            className="bg-primary hover:bg-primary/90 text-white px-5 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20 w-full sm:w-auto"
+            className="bg-primary hover:bg-primary/90 text-white px-5 py-3 sm:py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-lg shadow-primary/20 w-full sm:w-auto"
           >
             <Printer size={18} />
             Imprimir Folha
@@ -327,7 +327,7 @@ const RelatoriosPage = () => {
                 setFalhaDocenteIdx(0);
                 setFalhaModalOpen(true);
               }}
-              className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-5 py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-sm w-full sm:w-auto border border-amber-300"
+              className="bg-amber-100 hover:bg-amber-200 text-amber-800 px-5 py-3 sm:py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 font-bold shadow-sm w-full sm:w-auto border border-amber-300"
             >
               <FileText size={18} />
               Justificação Individual (Atraso)
@@ -337,7 +337,7 @@ const RelatoriosPage = () => {
       </div>
 
       {/* Selectors - No Print */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 bg-card p-6 rounded-2xl border shadow-sm no-print items-end">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 bg-card p-4 sm:p-6 rounded-2xl border shadow-sm no-print items-end">
         <div className="space-y-2">
           <label className="text-sm font-semibold text-muted-foreground">Mês</label>
           <select 
@@ -382,7 +382,7 @@ const RelatoriosPage = () => {
           </select>
         </div>
         <div className="space-y-2">
-          <label className="flex items-center gap-2 bg-background border rounded-xl p-2.5 h-[46px] cursor-pointer select-none">
+          <label className="flex items-center gap-2 bg-background border rounded-xl p-2.5 min-h-[46px] h-auto cursor-pointer select-none">
             <input 
               type="checkbox" 
               checked={showVigias}
@@ -459,7 +459,7 @@ const RelatoriosPage = () => {
 
       {/* Report Sheet - Print Ready */}
       {viewMode === 'folha' && (
-        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[1000px] print:p-0 print:border-0 print:shadow-none w-full max-w-[1100px] mx-auto print:max-w-none">
+        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[1000px] print:p-0 print:border-0 print:shadow-none w-full max-w-[1100px] mx-auto print:max-w-none overflow-hidden max-w-full">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-2">
               <img src="/logo.png" alt="Instituto Superior Politécnico de Tete" className="h-16 object-contain" />
@@ -482,7 +482,11 @@ const RelatoriosPage = () => {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto w-full scrollbar-thin print:border-none print:overflow-visible print:w-full">
+              {/* Scroll Cue on Mobile */}
+              <span className="lg:hidden text-[10px] text-muted-foreground flex items-center gap-1.5 mb-2 bg-secondary/30 w-fit px-2 py-1 rounded font-medium select-none no-print">
+                ↔️ Deslize para o lado para ver a tabela completa
+              </span>
+              <div className="w-full overflow-x-auto max-w-full scrollbar-thin print:border-none print:overflow-visible print:w-full">
                 <table className="w-full border-collapse text-[10px] text-center min-w-[950px] print:min-w-0">
                   <thead>
                     <tr className="bg-gray-200 border-2 border-black">
@@ -752,7 +756,7 @@ const RelatoriosPage = () => {
 
       {/* Falha Print Template */}
       {viewMode === 'falha' && dados[falhaDocenteIdx] && (
-        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[1000px] flex flex-col print:p-0 print:border-0 print:shadow-none w-full max-w-[850px] mx-auto print:max-w-none relative text-xs sm:text-sm" style={{ fontSize: '12pt' }}>
+        <div className="bg-white text-black p-4 sm:p-8 border sm:border-gray-200 sm:shadow-lg rounded-2xl min-h-[1000px] flex flex-col print:p-0 print:border-0 print:shadow-none w-full max-w-[850px] mx-auto print:max-w-none relative text-xs sm:text-sm overflow-hidden max-w-full" style={{ fontSize: '12pt' }}>
           <div className="text-center mb-8">
             <img src="/emblema.png" alt="República de Moçambique" className="h-24 mx-auto mb-2 object-contain" />
             <h2 className="font-bold uppercase text-sm tracking-wider">República de Moçambique</h2>
@@ -777,7 +781,11 @@ const RelatoriosPage = () => {
 
             <p className="mb-4 font-bold">Resumo das Horas Lançadas e Valor a Pagar:</p>
             
-            <div className="overflow-x-auto w-full scrollbar-thin print:border-none print:overflow-visible print:w-full border-2 border-black">
+            {/* Scroll Cue on Mobile */}
+            <span className="lg:hidden text-[10px] text-muted-foreground flex items-center gap-1.5 mb-2 bg-secondary/30 w-fit px-2 py-1 rounded font-medium select-none no-print">
+              ↔️ Deslize para o lado para ver a tabela completa
+            </span>
+            <div className="w-full overflow-x-auto max-w-full scrollbar-thin print:border-none print:overflow-visible print:w-full border-2 border-black">
               <table className="w-full border-collapse text-[9px] text-center print:min-w-0">
                 <thead>
                   <tr className="bg-gray-200 border-2 border-black">
