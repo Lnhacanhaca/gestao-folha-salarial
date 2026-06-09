@@ -27,7 +27,8 @@ class AuthService {
         id: user.id,
         username: user.username,
         role: user.role,
-        curso_id: user.curso_id
+        curso_id: user.curso_id,
+        first_login: !!user.first_login
       }
     };
   }

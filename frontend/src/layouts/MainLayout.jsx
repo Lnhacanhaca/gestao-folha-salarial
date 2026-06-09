@@ -240,8 +240,11 @@ const MainLayout = () => {
         </div>
       )}
 
-      {isProfileModalOpen && (
-        <ProfileModal onClose={() => setIsProfileModalOpen(false)} />
+      {(isProfileModalOpen || (user && user.role !== 'ADMIN' && user.first_login)) && (
+        <ProfileModal 
+          onClose={() => setIsProfileModalOpen(false)} 
+          force={!!(user && user.role !== 'ADMIN' && user.first_login)} 
+        />
       )}
     </div>
   );

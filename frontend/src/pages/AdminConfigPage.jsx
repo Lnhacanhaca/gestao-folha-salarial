@@ -63,6 +63,17 @@ const AdminConfigPage = () => {
     motivo: ''
   });
 
+  // Limpeza de Lançamentos state
+  const [diretores, setDiretores] = useState([]);
+  const [cleanForm, setCleanForm] = useState({
+    mode: 'course', // 'course' or 'director'
+    curso_id: 1, // default to Geral (Todos os cursos)
+    diretor_id: '',
+    mes: new Date().getMonth() + 1,
+    ano: new Date().getFullYear()
+  });
+  const [cleaning, setCleaning] = useState(false);
+
   const fetchExcecoes = async () => {
     setLoadingExcecoes(true);
     try {
@@ -75,8 +86,22 @@ const AdminConfigPage = () => {
     }
   };
 
+  const fetchDiretores = async () => {
+    try {
+      const { data } = await api.get('/users');
+      const filtered = data.filter(u => u.role === 'DIRETOR_CURSO');
+      setDiretores(filtered);
+      if (filtered.length > 0) {
+        setCleanForm(prev => ({ ...prev, diretor_id: filtered[0].id }));
+      }
+    } catch (err) {
+      console.error('Erro ao buscar utilizadores/diretores:', err);
+    }
+  };
+
   useEffect(() => {
     fetchExcecoes();
+    fetchDiretores();
   }, []);
 
   const handleAddExcecao = async (e) => {
@@ -223,6 +248,89 @@ const AdminConfigPage = () => {
       toast.error('Falha no restauro: ' + (error.response?.data?.message || error.message), { id: toastId });
     } finally {
       setRestoring(false);
+    }
+  };
+
+  const handleCleanLancamentos = async (e) => {
+    e.preventDefault();
+    
+    const mesNome = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ][cleanForm.mes - 1];
+
+    let targetDescription = "";
+    if (cleanForm.mode === 'director') {
+      const dir = diretores.find(d => d.id === parseInt(cleanForm.diretor_id));
+      targetDescription = `do Diretor de Curso "${dir?.username || ''}"`;
+    } else {
+      if (parseInt(cleanForm.curso_id) === 1) {
+        targetDescription = "de Todos os Cursos (Geral)";
+      } else {
+        const cursosNomes = {
+          2: "Contabilidade e Auditoria",
+          3: "Contabilidade e Administração Pública",
+          4: "Engenharia de Minas",
+          5: "Engenharia de Processamento Mineral",
+          6: "Engenharia Informática"
+        };
+        targetDescription = `do Curso "${cursosNomes[cleanForm.curso_id]}"`;
+      }
+    }
+
+    toast((t) => (
+      <div className="flex flex-col gap-3">
+        <p className="font-bold text-destructive flex items-center gap-1.5 uppercase">
+          <AlertTriangle size={16} className="shrink-0 animate-bounce" />
+          Confirmar Limpeza Permanente
+        </p>
+        <p className="text-sm font-semibold text-slate-700 leading-normal">
+          Tem certeza de que deseja apagar permanentemente todos os lançamentos de horas {targetDescription} para o período de {mesNome} de {cleanForm.ano}?
+        </p>
+        <p className="text-xs text-red-500 font-bold leading-normal">
+          ⚠️ Esta ação apagará as folhas e seus detalhes e NÃO pode ser desfeita!
+        </p>
+        <div className="flex justify-end gap-2 mt-2">
+          <button 
+            onClick={() => toast.dismiss(t.id)} 
+            className="px-3 py-1.5 text-xs font-bold bg-secondary hover:bg-secondary/80 rounded-lg transition-colors border"
+          >
+            Cancelar
+          </button>
+          <button 
+            onClick={async () => {
+              toast.dismiss(t.id);
+              await executeClean();
+            }} 
+            className="px-3 py-1.5 text-xs font-bold bg-destructive hover:bg-destructive/90 text-white rounded-lg transition-colors shadow-lg"
+          >
+            Confirmar Limpeza
+          </button>
+        </div>
+      </div>
+    ), { duration: Infinity, style: { minWidth: '400px' } });
+  };
+
+  const executeClean = async () => {
+    setCleaning(true);
+    const loadingToast = toast.loading('A apagar lançamentos de horas...');
+    try {
+      const payload = {
+        mes: parseInt(cleanForm.mes),
+        ano: parseInt(cleanForm.ano)
+      };
+      if (cleanForm.mode === 'director') {
+        payload.diretor_id = parseInt(cleanForm.diretor_id);
+      } else {
+        payload.curso_id = parseInt(cleanForm.curso_id);
+      }
+
+      const { data } = await api.post('/admin/clean-folhas', payload);
+      toast.success(data.message || 'Lançamentos apagados com sucesso!', { id: loadingToast });
+    } catch (err) {
+      toast.error('Erro ao apagar lançamentos: ' + (err.response?.data?.error?.message || err.response?.data?.error || err.message), { id: loadingToast });
+    } finally {
+      setCleaning(false);
     }
   };
 
@@ -578,6 +686,104 @@ const AdminConfigPage = () => {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Limpeza de Lançamentos de Horas */}
+      <div className="bg-card border shadow-sm rounded-3xl p-6 space-y-6 relative overflow-hidden transition-all duration-300 hover:shadow-md">
+        <div className="flex items-center gap-2.5 pb-4 border-b">
+          <Trash2 className="text-destructive" size={24} />
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">Limpeza de Lançamentos de Horas</h2>
+            <p className="text-xs text-muted-foreground">Apague permanentemente lançamentos de horas de cursos específicos ou diretores</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleCleanLancamentos} className="grid grid-cols-1 md:grid-cols-4 gap-6 items-end">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-500">Modo de Seleção</label>
+            <select
+              value={cleanForm.mode}
+              onChange={(e) => setCleanForm({ ...cleanForm, mode: e.target.value })}
+              className="w-full bg-secondary/50 border-none rounded-xl py-2.5 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold"
+            >
+              <option value="course">Por Curso</option>
+              <option value="director">Por Diretor de Curso</option>
+            </select>
+          </div>
+
+          {cleanForm.mode === 'course' ? (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-500">Curso</label>
+              <select
+                value={cleanForm.curso_id}
+                onChange={(e) => setCleanForm({ ...cleanForm, curso_id: parseInt(e.target.value) })}
+                className="w-full bg-secondary/50 border-none rounded-xl py-2.5 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold"
+              >
+                <option value={1}>Geral (Todos os Cursos)</option>
+                <option value={2}>Contabilidade e Auditoria</option>
+                <option value={3}>Contabilidade e Administração Pública</option>
+                <option value={4}>Engenharia de Minas</option>
+                <option value={5}>Engenharia de Processamento Mineral</option>
+                <option value={6}>Engenharia Informática</option>
+              </select>
+            </div>
+          ) : (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-500">Diretor de Curso</label>
+              <select
+                value={cleanForm.diretor_id}
+                onChange={(e) => setCleanForm({ ...cleanForm, diretor_id: e.target.value })}
+                className="w-full bg-secondary/50 border-none rounded-xl py-2.5 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold"
+              >
+                {diretores.map(d => (
+                  <option key={d.id} value={d.id}>
+                    {d.username} (Gere: {d.curso_id === 2 ? 'CA/CAP' : d.curso_id === 4 ? 'EM/EPM' : d.curso_id === 6 ? 'EI' : d.curso_id})
+                  </option>
+                ))}
+                {diretores.length === 0 && (
+                  <option value="">Nenhum diretor cadastrado</option>
+                )}
+              </select>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-500">Mês</label>
+              <select
+                value={cleanForm.mes}
+                onChange={(e) => setCleanForm({ ...cleanForm, mes: parseInt(e.target.value) })}
+                className="w-full bg-secondary/50 border-none rounded-xl py-2.5 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold"
+              >
+                {[
+                  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+                  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+                ].map((m, i) => (
+                  <option key={i} value={i + 1}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-500">Ano</label>
+              <input
+                type="number"
+                value={cleanForm.ano}
+                onChange={(e) => setCleanForm({ ...cleanForm, ano: parseInt(e.target.value) })}
+                className="w-full bg-secondary/50 border-none rounded-xl py-2.5 px-3 outline-none focus:ring-2 focus:ring-primary/20 text-xs font-semibold"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={cleaning || (cleanForm.mode === 'director' && !cleanForm.diretor_id)}
+            className="w-full bg-destructive hover:bg-destructive/90 disabled:opacity-50 text-white py-2.5 px-4 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5 shadow-destructive/10 cursor-pointer"
+          >
+            {cleaning ? <RefreshCw className="animate-spin" size={14} /> : <Trash2 size={14} />}
+            Apagar Lançamentos
+          </button>
+        </form>
       </div>
 
       {/* Security alert callout banner */}

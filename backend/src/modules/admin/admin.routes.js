@@ -8,6 +8,7 @@ router.use(authorizeRoles('ADMIN'));
 
 router.get('/backup', adminController.backup);
 router.post('/restore', adminController.restore);
+router.post('/clean-folhas', adminController.apagarLancamentos);
 
 // Exceções de Prazo de Edição
 router.get('/excecoes', adminController.listarExcecoes);

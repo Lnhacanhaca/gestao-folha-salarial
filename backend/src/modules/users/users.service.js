@@ -25,7 +25,8 @@ class UserService {
       username,
       password: hashedPassword,
       role,
-      curso_id: role === 'ADMIN' ? null : parseInt(curso_id)
+      curso_id: role === 'ADMIN' ? null : parseInt(curso_id),
+      first_login: true
     });
 
     await logAction({
@@ -62,6 +63,7 @@ class UserService {
 
     if (password) {
       data.password = await bcrypt.hash(password, 10);
+      data.first_login = true;
     }
 
     await userRepository.update(id, data);
@@ -112,6 +114,7 @@ class UserService {
     const data = { username };
     if (password) {
       data.password = await bcrypt.hash(password, 10);
+      data.first_login = false;
     }
 
     await userRepository.update(userId, data);

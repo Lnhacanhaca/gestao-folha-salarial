@@ -82,6 +82,14 @@ const importar = async (req, res, next) => {
 
   const trx = await db.transaction();
   try {
+    const existingFolhas = await trx('folhas')
+      .where({
+        curso_id: parseInt(curso_id),
+        mes: parseInt(mes),
+        ano: parseInt(ano)
+      });
+
+    const activeFolhaIds = [];
 
     for (const item of dados) {
       const semanas = Array.isArray(item.semanas) ? item.semanas : [];
@@ -137,6 +145,7 @@ const importar = async (req, res, next) => {
           });
           // Clear details to re‑insert
           await trx('folha_detalhes').where({ folha_id: folha.id }).del();
+          activeFolhaIds.push(folha.id);
         } else {
           if (isPostgres) {
             const [inserted] = await trx('folhas').insert({
@@ -153,6 +162,7 @@ const importar = async (req, res, next) => {
               observacoes: item.observacoes || null
             }).returning('*');
             folha = inserted;
+            activeFolhaIds.push(folha.id);
           } else {
             const [insertedFolhaId] = await trx('folhas').insert({
               docente_id: docente.id,
@@ -168,6 +178,7 @@ const importar = async (req, res, next) => {
               observacoes: item.observacoes || null
             });
             folha = await trx('folhas').where({ id: insertedFolhaId }).first();
+            activeFolhaIds.push(folha.id);
           }
         }
 
@@ -183,6 +194,13 @@ const importar = async (req, res, next) => {
 
         await trx('folha_detalhes').insert(detalhes);
       }
+    }
+
+    const existingIds = existingFolhas.map(f => f.id);
+    const idsToDelete = existingIds.filter(id => !activeFolhaIds.includes(id));
+    if (idsToDelete.length > 0) {
+      await trx('folha_detalhes').whereIn('folha_id', idsToDelete).del();
+      await trx('folhas').whereIn('id', idsToDelete).del();
     }
 
     await trx.commit();
