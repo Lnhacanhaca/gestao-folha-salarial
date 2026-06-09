@@ -84,16 +84,16 @@ const LoginPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6 p-8 bg-slate-50/40 dark:bg-slate-900/30 backdrop-blur-md rounded-[32px] border border-slate-100 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.02)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.15)]">
+            <form onSubmit={handleSubmit} className="space-y-6 p-8 bg-gradient-to-br from-blue-50/30 via-white to-white dark:from-slate-900/30 dark:via-slate-950 dark:to-slate-950 rounded-[32px] border border-blue-100/50 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(37,99,235,0.03)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.2)]">
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
                   Nome de Utilizador
                 </label>
                 <div 
-                  className={`relative flex items-center bg-white dark:bg-slate-950 border rounded-2xl transition-all duration-300 ${
+                  className={`relative flex items-center bg-white dark:bg-slate-900 border rounded-2xl transition-all duration-300 ${
                     usernameFocused 
                       ? 'border-primary ring-4 ring-primary/10 shadow-sm' 
-                      : 'border-slate-200 dark:border-slate-800/60'
+                      : 'border-slate-200/80 dark:border-slate-800/80'
                   }`}
                 >
                   <User 
@@ -129,10 +129,10 @@ const LoginPage = () => {
                   </a>
                 </div>
                 <div 
-                  className={`relative flex items-center bg-white dark:bg-slate-955 border rounded-2xl transition-all duration-300 ${
+                  className={`relative flex items-center bg-white dark:bg-slate-900 border rounded-2xl transition-all duration-300 ${
                     passwordFocused 
                       ? 'border-primary ring-4 ring-primary/10 shadow-sm' 
-                      : 'border-slate-200 dark:border-slate-800/60'
+                      : 'border-slate-200/80 dark:border-slate-800/80'
                   }`}
                 >
                   <Lock 
