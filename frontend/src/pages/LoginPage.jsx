@@ -8,6 +8,8 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [usernameFocused, setUsernameFocused] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -82,36 +84,70 @@ const LoginPage = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-5 p-6 bg-slate-50/60 dark:bg-slate-900/40 rounded-3xl border border-slate-100 dark:border-slate-800/80 shadow-sm">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-600 dark:text-slate-400">Nome de Utilizador</label>
-                <div className="relative">
-                  <User className="absolute left-3 top-3.5 text-slate-400" size={16} />
+            <form onSubmit={handleSubmit} className="space-y-6 p-8 bg-slate-50/40 dark:bg-slate-900/30 backdrop-blur-md rounded-[32px] border border-slate-100 dark:border-slate-800/80 shadow-[0_20px_50px_rgba(0,0,0,0.02)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.15)]">
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ml-1">
+                  Nome de Utilizador
+                </label>
+                <div 
+                  className={`relative flex items-center bg-white dark:bg-slate-950 border rounded-2xl transition-all duration-300 ${
+                    usernameFocused 
+                      ? 'border-primary ring-4 ring-primary/10 shadow-sm' 
+                      : 'border-slate-200 dark:border-slate-800/60'
+                  }`}
+                >
+                  <User 
+                    className={`absolute left-4 transition-colors duration-300 ${
+                      usernameFocused ? 'text-primary' : 'text-slate-400'
+                    }`} 
+                    size={18} 
+                  />
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-3.5 pl-10 pr-4 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder-slate-400"
+                    onFocus={() => setUsernameFocused(true)}
+                    onBlur={() => setUsernameFocused(false)}
+                    className="w-full bg-transparent border-0 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-0 placeholder-slate-400"
                     placeholder="Introduza o seu nome de utilizador"
                     required
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold text-slate-600 dark:text-slate-400">Palavra-passe</label>
-                  <a href="#" onClick={(e) => { e.preventDefault(); alert("Por favor, contacte o Administrador Geral para redefinir a sua palavra-passe."); }} className="text-[10px] font-bold text-primary hover:underline">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center ml-1">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Palavra-passe
+                  </label>
+                  <a 
+                    href="#" 
+                    onClick={(e) => { e.preventDefault(); alert("Por favor, contacte o Administrador Geral para redefinir a sua palavra-passe."); }} 
+                    className="text-[10px] font-bold text-primary hover:underline transition-all"
+                  >
                     Esqueceu a palavra-passe?
                   </a>
                 </div>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3.5 text-slate-400" size={16} />
+                <div 
+                  className={`relative flex items-center bg-white dark:bg-slate-955 border rounded-2xl transition-all duration-300 ${
+                    passwordFocused 
+                      ? 'border-primary ring-4 ring-primary/10 shadow-sm' 
+                      : 'border-slate-200 dark:border-slate-800/60'
+                  }`}
+                >
+                  <Lock 
+                    className={`absolute left-4 transition-colors duration-300 ${
+                      passwordFocused ? 'text-primary' : 'text-slate-400'
+                    }`} 
+                    size={18} 
+                  />
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl py-3.5 pl-10 pr-4 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all placeholder-slate-400"
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
+                    className="w-full bg-transparent border-0 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-0 placeholder-slate-400"
                     placeholder="••••••••"
                     required
                   />
@@ -121,7 +157,7 @@ const LoginPage = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-primary hover:bg-primary/95 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-primary/25 transition-all active:scale-[0.98] hover:scale-[1.01] flex items-center justify-center gap-2 text-xs cursor-pointer mt-8"
+                className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/95 hover:to-blue-600/95 text-white font-extrabold py-4 px-6 rounded-2xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 active:scale-[0.98] hover:scale-[1.01] flex items-center justify-center gap-2 text-xs cursor-pointer mt-8"
               >
                 {loading ? <Loader2 className="animate-spin" size={16} /> : 'Iniciar Sessão'}
               </button>
