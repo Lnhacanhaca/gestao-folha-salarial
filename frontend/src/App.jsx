@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -24,6 +24,16 @@ const ProtectedRoute = ({ children, roles }) => {
 
   return children;
 };
+
+function RoutePersister() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    sessionStorage.setItem('lastRoute', location.pathname + location.search);
+  }, [location]);
+
+  return null;
+}
 
 
 
@@ -62,7 +72,14 @@ function AppRoutes() {
 }
 
 function App() {
+  const initialRoute = sessionStorage.getItem('lastRoute') || '/';
+
   useEffect(() => {
+    // Force clean URL in address bar to hide subpages/menus/login path
+    if (window.location.pathname !== '/') {
+      window.history.replaceState({}, '', '/');
+    }
+
     // Apply theme mode (Dark mode)
     const savedMode = localStorage.getItem('themeMode') || 'light';
     if (savedMode === 'dark') {
@@ -96,7 +113,8 @@ function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
+      <MemoryRouter initialEntries={[initialRoute]}>
+        <RoutePersister />
         <AuthProvider>
           <AppRoutes />
           <Toaster 
@@ -118,7 +136,7 @@ function App() {
             }} 
           />
         </AuthProvider>
-      </BrowserRouter>
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }
